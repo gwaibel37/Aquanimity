@@ -75,9 +75,9 @@ class _MenuScreenState extends State<MenuScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                    border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [
@@ -251,7 +251,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
                 builder: (context, child) {
                   return Transform.rotate(
                     angle: _radarController.value * 2 * math.pi,
-                    child: Icon(Icons.track_changes, color: Colors.cyanAccent.withOpacity(0.5), size: 40),
+                    child: Icon(Icons.track_changes, color: Colors.cyanAccent.withValues(alpha: 0.5), size: 40),
                   );
                 },
               ),
@@ -267,7 +267,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
                     fontSize: 90, 
                     fontWeight: FontWeight.w100,
                     color: Colors.cyanAccent,
-                    shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withOpacity(0.5))]
+                    shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withValues(alpha: 0.5))]
                   )
                 ),
                 Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2)),
