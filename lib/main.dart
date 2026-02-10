@@ -37,6 +37,9 @@ class _MenuScreenState extends State<MenuScreen> {
   // FIXED: Changed from int to TextEditingController for custom input
   final TextEditingController _timeController = TextEditingController(text: "5");
   int totalMetersSaved = 0;
+  int successfulDives = 0;
+  int forfeitDives = 0;
+  int metersLost = 0;
 
   @override
   void initState() {
@@ -48,6 +51,9 @@ class _MenuScreenState extends State<MenuScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       totalMetersSaved = prefs.getInt('total_depth') ?? 0;
+      successfulDives = prefs.getInt('successful_dives') ?? 0;
+      forfeitDives = prefs.getInt('forfeit_dives') ?? 0;
+      metersLost = prefs.getInt('meters_lost') ?? 0;
     });
   }
 
@@ -125,6 +131,24 @@ class _MenuScreenState extends State<MenuScreen> {
                     _loadHistory();
                   },
                   child: const Text("LAUNCH SUB", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+
+                const SizedBox(height: 20),
+
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purpleAccent[700],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 22)
+                  ),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => StatsScreen(successfulDives: successfulDives, forfeitDives: forfeitDives, metersLost: metersLost)),
+                    );
+                    _loadHistory();
+                  },
+                  child: const Text("DEPTH STATS", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -211,6 +235,18 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       final prefs = await SharedPreferences.getInstance();
       int currentTotal = prefs.getInt('total_depth') ?? 0;
       await prefs.setInt('total_depth', currentTotal + finalDepth);
+
+      // Track successful dive
+      int successfulCount = prefs.getInt('successful_dives') ?? 0;
+      await prefs.setInt('successful_dives', successfulCount + 1);
+    } else if (wasforced && finalDepth > 0) {
+      // Track forfeit dive and meters lost
+      final prefs = await SharedPreferences.getInstance();
+      int forfeitCount = prefs.getInt('forfeit_dives') ?? 0;
+      await prefs.setInt('forfeit_dives', forfeitCount + 1);
+      
+      int lostMeters = prefs.getInt('meters_lost') ?? 0;
+      await prefs.setInt('meters_lost', lostMeters + finalDepth);
     }
 
     setState(() {
@@ -292,6 +328,108 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class StatsScreen extends StatefulWidget {
+  final int successfulDives;
+  final int forfeitDives;
+  final int metersLost;
+
+  const StatsScreen({
+    super.key,
+    required this.successfulDives,
+    required this.forfeitDives,
+    required this.metersLost,
+  });
+
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF001D3D), Colors.black],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.analytics, color: Colors.purpleAccent, size: 50),
+              const Text("DEPTH STATISTICS", style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8)),
+              const SizedBox(height: 60),
+
+              // Successful Dives
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  children: [
+                    const Text("SUCCESSFUL DEPTH", style: TextStyle(color: Colors.greenAccent, fontSize: 14)),
+                    Text("${widget.successfulDives}", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+
+              // Forfeit Dives
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  children: [
+                    const Text("DEPTH FORFEIT", style: TextStyle(color: Colors.orangeAccent, fontSize: 14)),
+                    Text("${widget.forfeitDives}", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+
+              // Meters Lost
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  children: [
+                    const Text("METERS LOST", style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+                    Text("${widget.metersLost} m", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 60),
+
+              TextButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text("BACK TO SHIP"),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
