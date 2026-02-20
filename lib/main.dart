@@ -83,7 +83,6 @@ class Treasure {
 }
 
 // --- LIGHTWEIGHT BACKGROUND ---
-// Uses a Radial Gradient which is easier for emulators to smooth out than Linear
 class AbyssalBackground extends StatelessWidget {
   final Widget child;
   const AbyssalBackground({super.key, required this.child});
@@ -279,7 +278,10 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
 
   void _triggerTheBends() async {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("⚠️ VIBRATING: THE BENDS!")));
-    if (await Vibration.hasVibrator() ?? false) { 
+    
+    // FIXED: Removed redundant dead code ?? false
+    final hasVibrator = await Vibration.hasVibrator();
+    if (hasVibrator == true) { 
       Vibration.vibrate(pattern: [0, 500, 200, 500]);
     }
     stopDive(wasforced: true);
@@ -376,7 +378,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       body: SafeArea(
         child: Stack(
           children: [
-            // BACK BUTTON: Only visible before engines are engaged
+            // BACK BUTTON: Visible before dive starts
             if (!isDiving && secondsPassed == 0)
               Positioned(
                 top: 10,
