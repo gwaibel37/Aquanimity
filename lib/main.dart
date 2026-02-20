@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
+// Importing loot data
+import 'loot_data.dart';
+
 void main() => runApp(const AquanimityApp());
 
 class AquanimityApp extends StatelessWidget {
@@ -27,56 +30,110 @@ class AquanimityApp extends StatelessWidget {
   }
 }
 
-// --- TREASURE SYSTEM ---
-enum Rarity { common, uncommon, rare, epic, legendary, mythic }
+// --- PDA NOTIFICATION WIDGET ---
+class PDANotification extends StatelessWidget {
+  final String message;
+  final Color color;
+  final bool visible;
+
+  const PDANotification({
+    super.key,
+    required this.message,
+    required this.color,
+    required this.visible,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutBack,
+      top: visible ? 60 : -120,
+      left: 20,
+      right: 20,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(230),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color, width: 2),
+            boxShadow: [BoxShadow(color: color.withAlpha(80), blurRadius: 15)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.sensors, color: color, size: 24),
+              const SizedBox(width: 15),
+              Flexible(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- IMPROVED TREASURE SYSTEM ---
+enum Rarity {
+  common(Colors.grey, 15),
+  uncommon(Colors.greenAccent, 50),
+  rare(Colors.blueAccent, 100),
+  epic(Colors.purpleAccent, 200),
+  legendary(Colors.amber, 500),
+  mythic(Colors.redAccent, 1000);
+
+  final Color color;
+  final int value;
+  const Rarity(this.color, this.value);
+}
 
 class Treasure {
   final String name;
   final Rarity rarity;
-  final Color color;
 
-  Treasure(this.name, this.rarity, this.color);
-
-  static Color getColor(String rarityName) {
-    switch (rarityName) {
-      case 'mythic': return Colors.redAccent;
-      case 'legendary': return Colors.amber;
-      case 'epic': return Colors.purpleAccent;
-      case 'rare': return Colors.blueAccent;
-      case 'uncommon': return Colors.greenAccent;
-      default: return Colors.grey;
-    }
-  }
-
-  static int getCoinValue(Rarity rarity) {
-    switch (rarity) {
-      case Rarity.mythic: return 1000;
-      case Rarity.legendary: return 500;
-      case Rarity.epic: return 200;
-      case Rarity.rare: return 100;
-      case Rarity.uncommon: return 50;
-      case Rarity.common: return 15;
-    }
-  }
+  Treasure(this.name, this.rarity);
 
   static Treasure generate(int depth) {
     final random = math.Random();
-    double commonW = 100.0;
-    double uncommonW = 50.0 + (depth / 10);
-    double rareW = 20.0 + (depth / 5);
-    double epicW = 5.0 + (depth / 2);
-    double legendaryW = 1.0 + (depth / 1.5);
-    double mythicW = 0.1 + (depth / 1);
 
-    double totalWeight = commonW + uncommonW + rareW + epicW + legendaryW + mythicW;
+    // Logic: 0 weight until specific depth milestones are met
+    final Map<Rarity, double> weights = {
+      Rarity.mythic: (depth >= 900) ? 0.05 + (depth / 150) : 0.0,
+      Rarity.legendary: (depth >= 600) ? 0.5 + (depth / 80) : 0.0,
+      Rarity.epic: (depth >= 350) ? 2.0 + (depth / 40) : 0.0,
+      Rarity.rare: 10.0 + (depth / 20),
+      Rarity.uncommon: 40.0 + (depth / 10),
+      Rarity.common: 150.0, // The baseline anchor
+    };
+
+    double totalWeight = weights.values.fold(0, (sum, w) => sum + w);
     double roll = random.nextDouble() * totalWeight;
 
-    if (roll < mythicW) return Treasure("Abyssal Relic", Rarity.mythic, Colors.redAccent);
-    if (roll < mythicW + legendaryW) return Treasure("Golden Trident", Rarity.legendary, Colors.amber);
-    if (roll < mythicW + legendaryW + epicW) return Treasure("Pearl of Atlas", Rarity.epic, Colors.purpleAccent);
-    if (roll < mythicW + legendaryW + epicW + rareW) return Treasure("Sunken Coin", Rarity.rare, Colors.blueAccent);
-    if (roll < mythicW + legendaryW + epicW + rareW + uncommonW) return Treasure("Bio-Luminescent Kelp", Rarity.uncommon, Colors.greenAccent);
-    return Treasure("Rusty Anchor", Rarity.common, Colors.grey);
+    double cursor = 0;
+    // Iterate through rarities. Checking Common first prevents rare luck early.
+    for (Rarity r in Rarity.values) {
+      cursor += weights[r]!;
+      if (roll < cursor) {
+        return Treasure(_getItemName(r), r);
+      }
+    }
+    return Treasure("Rusty Anchor", Rarity.common);
+  }
+
+  static String _getItemName(Rarity rarity) {
+    final list = treasurePool[rarity] ?? ["Strange Object"];
+    return list[math.Random().nextInt(list.length)];
   }
 
   Map<String, String> toMap() => {'name': name, 'rarity': rarity.name};
@@ -96,10 +153,7 @@ class AbyssalBackground extends StatelessWidget {
         gradient: RadialGradient(
           center: Alignment.topCenter,
           radius: 1.5,
-          colors: [
-            Color(0xFF001D3D),
-            Colors.black,
-          ],
+          colors: [Color(0xFF001D3D), Colors.black],
           stops: [0.0, 0.8],
         ),
       ),
@@ -256,6 +310,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
   String statusMessage = "Pressure Seals: Nominal";
   late AnimationController _radarController;
 
+  // PDA State
+  String pdaMessage = "";
+  Color pdaColor = Colors.cyanAccent;
+  bool showPDA = false;
+  Timer? pdaDismissTimer;
+  final Set<int> reachedMilestones = {};
+
   @override
   void initState() {
     super.initState();
@@ -268,6 +329,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
     WidgetsBinding.instance.removeObserver(this);
     _radarController.dispose();
     timer?.cancel();
+    pdaDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -278,8 +340,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
 
   void _triggerTheBends() async {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("⚠️ VIBRATING: THE BENDS!")));
-    
-    // FIXED: Removed redundant dead code ?? false
     final hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator == true) { 
       Vibration.vibrate(pattern: [0, 500, 200, 500]);
@@ -287,11 +347,47 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
     stopDive(wasforced: true);
   }
 
+  void _triggerPDA(String message, Color color) async {
+    pdaDismissTimer?.cancel();
+    setState(() {
+      pdaMessage = message;
+      pdaColor = color;
+      showPDA = true;
+    });
+
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(duration: 100);
+    }
+
+    pdaDismissTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => showPDA = false);
+    });
+  }
+
   void startDive() {
-    setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; });
+    setState(() { 
+      isDiving = true; 
+      secondsPassed = 0; 
+      statusMessage = "DESCENT INITIATED"; 
+      reachedMilestones.clear();
+    });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
       setState(() {
         secondsPassed++;
+
+        // Threshold checks for PDA
+        if (secondsPassed == 350 && !reachedMilestones.contains(350)) {
+          _triggerPDA("EPIC TIER REACHED: SCANNING NEW SIGNATURES", Colors.purpleAccent);
+          reachedMilestones.add(350);
+        } else if (secondsPassed == 600 && !reachedMilestones.contains(600)) {
+          _triggerPDA("LEGENDARY TIER REACHED: ANOMALOUS MASS DETECTED", Colors.amber);
+          reachedMilestones.add(600);
+        } else if (secondsPassed == 900 && !reachedMilestones.contains(900)) {
+          _triggerPDA("MYTHIC TIER REACHED: ECOLOGICAL DATA REQUIRED", Colors.redAccent);
+          reachedMilestones.add(900);
+        }
+
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive(wasforced: false);
       });
     });
@@ -314,7 +410,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       bool isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == loot.name);
 
       if (isDuplicate) {
-        int coinReward = Treasure.getCoinValue(loot.rarity);
+        int coinReward = loot.rarity.value;
         await prefs.setInt('total_coins', (prefs.getInt('total_coins') ?? 0) + coinReward);
         if (mounted) _showDuplicateDialog(loot, coinReward);
       } else {
@@ -341,15 +437,15 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
   void _showRewardDialog(Treasure treasure) {
     showDialog(context: context, barrierDismissible: false, builder: (context) => AlertDialog(
       backgroundColor: Colors.black87,
-      shape: RoundedRectangleBorder(side: BorderSide(color: treasure.color), borderRadius: BorderRadius.circular(20)),
-      title: Text("SUNKEN TREASURE FOUND!", style: TextStyle(color: treasure.color, fontSize: 14, letterSpacing: 2)),
+      shape: RoundedRectangleBorder(side: BorderSide(color: treasure.rarity.color), borderRadius: BorderRadius.circular(20)),
+      title: Text("SUNKEN TREASURE FOUND!", style: TextStyle(color: treasure.rarity.color, fontSize: 14, letterSpacing: 2)),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.inventory_2, size: 80, color: treasure.color),
+        Icon(Icons.inventory_2, size: 80, color: treasure.rarity.color),
         const SizedBox(height: 20),
         Text(treasure.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: treasure.color.withAlpha(50), borderRadius: BorderRadius.circular(10)),
-        child: Text(treasure.rarity.name.toUpperCase(), style: TextStyle(color: treasure.color, fontWeight: FontWeight.bold))),
+        Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: treasure.rarity.color.withAlpha(50), borderRadius: BorderRadius.circular(10)),
+        child: Text(treasure.rarity.name.toUpperCase(), style: TextStyle(color: treasure.rarity.color, fontWeight: FontWeight.bold))),
       ]),
       actions: [Center(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text("SALVAGE ITEM", style: TextStyle(color: Colors.white))))],
     ));
@@ -378,7 +474,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       body: SafeArea(
         child: Stack(
           children: [
-            // BACK BUTTON: Visible before dive starts
+            // PDA OVERLAY
+            PDANotification(
+              message: pdaMessage,
+              color: pdaColor,
+              visible: showPDA,
+            ),
+
             if (!isDiving && secondsPassed == 0)
               Positioned(
                 top: 10,
@@ -433,7 +535,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<bool?> _showConfirmDialog(Map<String, dynamic> item, Color color) {
     final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
-    final value = Treasure.getCoinValue(rarity);
+    final value = rarity.value;
     return showDialog<bool>(context: context, builder: (context) => AlertDialog(
       backgroundColor: Colors.black87,
       shape: RoundedRectangleBorder(side: BorderSide(color: color), borderRadius: BorderRadius.circular(20)),
@@ -452,7 +554,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _sellItem(int index) async {
     final item = items[index];
     final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
-    final sellValue = Treasure.getCoinValue(rarity);
+    final sellValue = rarity.value;
     final prefs = await SharedPreferences.getInstance();
     setState(() { items.removeAt(index); totalCoins += sellValue; });
     await prefs.setStringList('treasure_inventory', items.reversed.map((i) => jsonEncode(i)).toList());
@@ -474,7 +576,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
-                final color = Treasure.getColor(item['rarity']);
+                final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
+                final color = rarity.color;
                 return Dismissible(
                   key: UniqueKey(),
                   direction: DismissDirection.endToStart,
