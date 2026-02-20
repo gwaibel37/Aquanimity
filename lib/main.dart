@@ -46,6 +46,7 @@ class Treasure {
       case 'uncommon': return Colors.greenAccent;
       default: return Colors.grey;
     }
+<<<<<<< Updated upstream
   }
 
   static int getCoinValue(Rarity rarity) {
@@ -116,11 +117,54 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Future<void> _loadHistory() async {
+=======
+  }
+
+  static Treasure generate(int depth) {
+    final random = math.Random();
+    double commonW = 100.0;
+    double uncommonW = 50.0 + (depth / 10);
+    double rareW = 20.0 + (depth / 5);
+    double epicW = 5.0 + (depth / 2);
+    double legendaryW = 1.0 + (depth / 1.5);
+    double mythicW = 0.1 + (depth / 1);
+
+    double totalWeight = commonW + uncommonW + rareW + epicW + legendaryW + mythicW;
+    double roll = random.nextDouble() * totalWeight;
+
+    if (roll < mythicW) return Treasure("Abyssal Relic", Rarity.mythic, Colors.redAccent);
+    if (roll < mythicW + legendaryW) return Treasure("Golden Trident", Rarity.legendary, Colors.amber);
+    if (roll < mythicW + legendaryW + epicW) return Treasure("Pearl of Atlas", Rarity.epic, Colors.purpleAccent);
+    if (roll < mythicW + legendaryW + epicW + rareW) return Treasure("Sunken Coin", Rarity.rare, Colors.blueAccent);
+    if (roll < mythicW + legendaryW + epicW + rareW + uncommonW) return Treasure("Bio-Luminescent Kelp", Rarity.uncommon, Colors.greenAccent);
+    return Treasure("Rusty Anchor", Rarity.common, Colors.grey);
+  }
+
+  Map<String, String> toMap() => {'name': name, 'rarity': rarity.name};
+}
+
+// --- SCREENS ---
+class MenuScreen extends StatefulWidget {
+  const MenuScreen({super.key});
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  final TextEditingController _timeController = TextEditingController(text: "5");
+  int totalMetersSaved = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       totalMetersSaved = prefs.getInt('total_depth') ?? 0;
-      totalCoins = prefs.getInt('total_coins') ?? 0;
     });
   }
 
@@ -128,6 +172,329 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.0, 0.9],
+            colors: [Color(0xFF001D3D), Colors.black],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.waves, color: Colors.cyanAccent, size: 50),
+                const Text("AQUANIMITY", style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8)),
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(12), // Modern withAlpha (0.0 - 1.0 represented as 0-255 internally)
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.cyanAccent.withAlpha(75)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text("LOGBOOK TOTAL", style: TextStyle(color: Colors.cyanAccent, fontSize: 14)),
+                      Text("$totalMetersSaved m", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 50),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _timeController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 24, color: Colors.cyanAccent),
+                    decoration: InputDecoration(
+                      helperText: "Type '0' for Endless",
+                      enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.white24), borderRadius: BorderRadius.circular(15)),
+                      focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.cyanAccent), borderRadius: BorderRadius.circular(15)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent[700], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20)),
+                  onPressed: () async {
+                    int mins = int.tryParse(_timeController.text) ?? 5;
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => DiveScreen(durationMinutes: mins == 0 ? -1 : mins)));
+                    if (context.mounted) _loadHistory();
+                  },
+                  child: const Text("LAUNCH SUB"),
+                ),
+                const SizedBox(height: 15),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent[700], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20)),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen())),
+                  child: const Text("TREASURE VAULT"),
+                ),
+                const SizedBox(height: 15),
+                TextButton(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen())),
+                  child: const Text("MISSION LOGS", style: TextStyle(color: Colors.white54)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DiveScreen extends StatefulWidget {
+  final int durationMinutes;
+  const DiveScreen({super.key, required this.durationMinutes});
+  @override
+  State<DiveScreen> createState() => _DiveScreenState();
+}
+
+class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  int secondsPassed = 0;
+  bool isDiving = false;
+  Timer? timer;
+  String statusMessage = "Seals: Nominal";
+  late AnimationController _radarController;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _radarController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _radarController.dispose();
+    timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (isDiving && state == AppLifecycleState.paused) _triggerTheBends();
+  }
+
+  void _triggerTheBends() async {
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(pattern: [0, 500, 200, 500]);
+    }
+    stopDive(wasforced: true);
+  }
+
+  void startDive() {
+    setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; });
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      setState(() {
+        secondsPassed++;
+        if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive(wasforced: false);
+      });
+    });
+  }
+
+  void stopDive({bool wasforced = false}) async {
+    timer?.cancel();
+    final int finalDepth = secondsPassed;
+    final prefs = await SharedPreferences.getInstance();
+
+    bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
+
+    if (isSuccessful) {
+      await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
+      await prefs.setInt('successful_dives', (prefs.getInt('successful_dives') ?? 0) + 1);
+
+      Treasure loot = Treasure.generate(finalDepth);
+      List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
+      inventory.add(jsonEncode(loot.toMap()));
+      await prefs.setStringList('treasure_inventory', inventory);
+      if (mounted) _showRewardDialog(loot);
+    } else if (wasforced) {
+      await prefs.setInt('forfeit_dives', (prefs.getInt('forfeit_dives') ?? 0) + 1);
+      await prefs.setInt('meters_lost', (prefs.getInt('meters_lost') ?? 0) + finalDepth);
+      int currentTotal = prefs.getInt('total_depth') ?? 0;
+      await prefs.setInt('total_depth', (currentTotal - finalDepth).clamp(0, 9999999));
+    }
+
+    if (mounted) {
+      setState(() {
+        isDiving = false;
+        statusMessage = wasforced ? "HULL BREACH: THE BENDS" : "DIVE LOGGED: $finalDepth m";
+        if (wasforced) secondsPassed = 0;
+      });
+    }
+  }
+
+  void _showRewardDialog(Treasure treasure) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black87,
+        shape: RoundedRectangleBorder(side: BorderSide(color: treasure.color), borderRadius: BorderRadius.circular(20)),
+        title: const Text("SALVAGE DETECTED", style: TextStyle(fontSize: 12, letterSpacing: 2)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inventory_2, size: 60, color: treasure.color),
+            const SizedBox(height: 15),
+            Text(treasure.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(treasure.rarity.name.toUpperCase(), style: TextStyle(color: treasure.color, fontWeight: FontWeight.bold, fontSize: 12)),
+          ],
+        ),
+        actions: [Center(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text("ADD TO VAULT")))],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
+    return Scaffold(
+      backgroundColor: Color.lerp(Colors.blue[900], Colors.black, (secondsPassed / 1000).clamp(0, 1)),
+      body: Stack(
+        children: [
+          Positioned(
+            top: 50, left: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("TARGET", style: TextStyle(fontSize: 10, color: Colors.cyanAccent)),
+                Text(targetDisplay, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          if (isDiving)
+            Positioned(
+              top: 50, right: 20,
+              child: AnimatedBuilder(
+                animation: _radarController,
+                builder: (context, child) => Transform.rotate(
+                  angle: _radarController.value * 2 * math.pi,
+                  child: Icon(Icons.track_changes, color: Colors.cyanAccent.withAlpha(128), size: 40),
+                ),
+              ),
+            ),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("$secondsPassed m", style: TextStyle(fontSize: 90, fontWeight: FontWeight.w100, color: Colors.cyanAccent, shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withAlpha(128))])),
+                Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2)),
+                const SizedBox(height: 80),
+                if (!isDiving && secondsPassed == 0) ElevatedButton(onPressed: startDive, child: const Text("ENGAGE")),
+                if (isDiving) OutlinedButton(onPressed: () => stopDive(), child: const Text("ASCEND")),
+                if (!isDiving && secondsPassed > 0) TextButton(onPressed: () => Navigator.pop(context), child: const Text("EXIT SUB")),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class InventoryScreen extends StatefulWidget {
+  const InventoryScreen({super.key});
+  @override
+  State<InventoryScreen> createState() => _InventoryScreenState();
+}
+
+class _InventoryScreenState extends State<InventoryScreen> {
+  List<Map<String, dynamic>> items = [];
+  @override
+  void initState() { super.initState(); _load(); }
+  _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('treasure_inventory') ?? [];
+    setState(() { items = list.map((e) => jsonDecode(e) as Map<String, dynamic>).toList().reversed.toList(); });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF001D3D), Colors.black])),
+        child: Column(
+          children: [
+            const SizedBox(height: 60),
+            const Text("TREASURE VAULT", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 4)),
+            const SizedBox(height: 20),
+            Expanded(
+              child: items.isEmpty 
+                ? const Center(child: Text("Empty"))
+                : ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      final color = Treasure.getColor(item['rarity']);
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                        decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(15), border: Border.all(color: color.withAlpha(100))),
+                        child: ListTile(
+                          leading: Icon(Icons.stars, color: color),
+                          title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(item['rarity'].toString().toUpperCase(), style: TextStyle(color: color, fontSize: 10)),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("BACK")),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StatsScreen extends StatefulWidget {
+  const StatsScreen({super.key});
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  int success = 0, forfeit = 0, lost = 0;
+  @override
+  void initState() { super.initState(); _load(); }
+  _load() async {
+>>>>>>> Stashed changes
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+<<<<<<< Updated upstream
+      totalMetersSaved = prefs.getInt('total_depth') ?? 0;
+      totalCoins = prefs.getInt('total_coins') ?? 0;
+=======
+      success = prefs.getInt('successful_dives') ?? 0;
+      forfeit = prefs.getInt('forfeit_dives') ?? 0;
+      lost = prefs.getInt('meters_lost') ?? 0;
+>>>>>>> Stashed changes
+    });
+  }
+
+  Widget _statCard(String title, String val, Color col) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(color: col.withAlpha(30), borderRadius: BorderRadius.circular(20), border: Border.all(color: col.withAlpha(100))),
+      child: Column(children: [Text(title, style: TextStyle(color: col, fontSize: 12)), Text(val, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold))]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+<<<<<<< Updated upstream
         decoration: BoxDecoration(
   gradient: LinearGradient(
     begin: Alignment.topCenter,
@@ -222,6 +589,20 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
             ),
           ),
+=======
+        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF001D3D), Colors.black])),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("MISSION LOGS", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 4)),
+            const SizedBox(height: 20),
+            _statCard("SUCCESSFUL DIVES", "$success", Colors.greenAccent),
+            _statCard("FORFEITED DIVES", "$forfeit", Colors.orangeAccent),
+            _statCard("METERS LOST", "$lost m", Colors.redAccent),
+            const SizedBox(height: 30),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("BACK")),
+          ],
+>>>>>>> Stashed changes
         ),
       ),
     );
