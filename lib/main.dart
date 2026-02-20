@@ -82,6 +82,33 @@ class Treasure {
   Map<String, String> toMap() => {'name': name, 'rarity': rarity.name};
 }
 
+// --- LIGHTWEIGHT BACKGROUND ---
+// Uses a Radial Gradient which is easier for emulators to smooth out than Linear
+class AbyssalBackground extends StatelessWidget {
+  final Widget child;
+  const AbyssalBackground({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.topCenter,
+          radius: 1.5,
+          colors: [
+            Color(0xFF001D3D),
+            Colors.black,
+          ],
+          stops: [0.0, 0.8],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 // --- SCREENS ---
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -103,9 +130,7 @@ class _MenuScreenState extends State<MenuScreen> {
     "Searching for Atlantis...",
     "Don't forget to breathe!",
     "Standard issue submarine.",
-    "Property of the Abyss.",
-    "Warning: Objects in sonar are wetter than they appear.",
-    "Taking 'Deep Focus' literally."
+    "Warning: Wetter than it appears.",
   ];
 
   @override
@@ -127,21 +152,7 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-  gradient: LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    // Adding a middle color helps the emulator calculate transitions better
-    colors: [
-      const Color(0xFF001D3D), 
-      const Color(0xFF000D1A), // Added transition step
-      Colors.black,
-    ],
-    // Adjusting stops forces the transition to spread out
-    stops: const [0.0, 0.6, 1.0], 
-  ),
-),
+      body: AbyssalBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -151,7 +162,6 @@ class _MenuScreenState extends State<MenuScreen> {
                   const Icon(Icons.waves, color: Colors.cyanAccent, size: 50),
                   const Text("AQUANIMITY", style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8)),
                   
-                  // Minecraft Splash Flair
                   Transform.rotate(
                     angle: -0.1,
                     child: SizedBox(
@@ -189,24 +199,18 @@ class _MenuScreenState extends State<MenuScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 40),
-                  const Text("Enter Dive Duration (Minutes):", style: TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
+                  const Text("Dive Duration (Mins):", style: TextStyle(color: Colors.grey, fontSize: 12)),
                   SizedBox(
-                    width: 200,
+                    width: 100,
                     child: TextField(
                       controller: _timeController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, color: Colors.cyanAccent),
-                      decoration: InputDecoration(
-                        hintText: "Mins",
-                        helperText: "Type '0' for Endless",
-                        enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.white24), borderRadius: BorderRadius.circular(15)),
-                        focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.cyanAccent), borderRadius: BorderRadius.circular(15)),
-                      ),
+                      decoration: const InputDecoration(focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent))),
                     ),
                   ),
+
                   const SizedBox(height: 40),
                   _menuButton("LAUNCH SUB", Colors.cyanAccent[700]!, () async {
                     int mins = int.tryParse(_timeController.text) ?? 5;
@@ -275,7 +279,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
 
   void _triggerTheBends() async {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("⚠️ VIBRATING: THE BENDS!")));
-    if (await Vibration.hasVibrator()) { 
+    if (await Vibration.hasVibrator() ?? false) { 
       Vibration.vibrate(pattern: [0, 500, 200, 500]);
     }
     stopDive(wasforced: true);
@@ -372,7 +376,18 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned(top: 20, left: 20, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // BACK BUTTON: Only visible before engines are engaged
+            if (!isDiving && secondsPassed == 0)
+              Positioned(
+                top: 10,
+                left: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+            Positioned(top: 20, left: 60, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text("TARGET DEPTH", style: TextStyle(fontSize: 10, color: Colors.cyanAccent, letterSpacing: 1)),
               Text(targetDisplay, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ])),
@@ -445,8 +460,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF001D3D), Colors.black])),
+      body: AbyssalBackground(
         child: SafeArea(
           child: Column(children: [
             const SizedBox(height: 20),
@@ -500,8 +514,7 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF001D3D), Colors.black])),
+      body: AbyssalBackground(
         child: SafeArea(
           child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Icon(Icons.analytics, color: Colors.blueAccent, size: 50),
