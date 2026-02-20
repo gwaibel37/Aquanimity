@@ -1,0 +1,10 @@
+ TODO:
+ - Unsuccessful dives where you initiate ascent early still count as successful dives
+ - The logbook needs successful dept as well as number of dives
+ - Creatures or/and achievement on successful dives like csgo lootcases, call them sunken treasure with rarity: mythic, legendary, epic, rare, uncommon, common 
+   [base odds for better content of chests by depth of successful dives]
+ - Every 1000 meters change for unlocking Creatures
+ - Daily lootboxes for successful dives (24 hour timer, once a day)
+ - Streaks for daily dives
+ - Add images and visuals rather stylized colors and symbols
+ - Notifications during dives, notifications when daily streaks are about to expire, and when sunken treasure if availible
