@@ -61,7 +61,7 @@ class PDANotification extends StatelessWidget {
             boxShadow: [BoxShadow(color: color.withAlpha(80), blurRadius: 15)],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: minAxisSize,
             children: [
               Icon(Icons.sensors, color: color, size: 24),
               const SizedBox(width: 15),
@@ -82,6 +82,8 @@ class PDANotification extends StatelessWidget {
       ),
     );
   }
+
+  MainAxisSize get minAxisSize => MainAxisSize.min;
 }
 
 // --- IMPROVED TREASURE SYSTEM ---
@@ -107,21 +109,19 @@ class Treasure {
   static Treasure generate(int depth) {
     final random = math.Random();
 
-    // Logic: 0 weight until specific depth milestones are met
     final Map<Rarity, double> weights = {
       Rarity.mythic: (depth >= 900) ? 0.05 + (depth / 150) : 0.0,
       Rarity.legendary: (depth >= 600) ? 0.5 + (depth / 80) : 0.0,
       Rarity.epic: (depth >= 350) ? 2.0 + (depth / 40) : 0.0,
       Rarity.rare: 10.0 + (depth / 20),
       Rarity.uncommon: 40.0 + (depth / 10),
-      Rarity.common: 150.0, // The baseline anchor
+      Rarity.common: 150.0,
     };
 
-    double totalWeight = weights.values.fold(0, (sum, w) => sum + w);
+    double totalWeight = weights.values.fold(0.0, (sum, w) => sum + w);
     double roll = random.nextDouble() * totalWeight;
 
     double cursor = 0;
-    // Iterate through rarities. Checking Common first prevents rare luck early.
     for (Rarity r in Rarity.values) {
       cursor += weights[r]!;
       if (roll < cursor) {
@@ -139,7 +139,6 @@ class Treasure {
   Map<String, String> toMap() => {'name': name, 'rarity': rarity.name};
 }
 
-// --- LIGHTWEIGHT BACKGROUND ---
 class AbyssalBackground extends StatelessWidget {
   final Widget child;
   const AbyssalBackground({super.key, required this.child});
@@ -162,7 +161,6 @@ class AbyssalBackground extends StatelessWidget {
   }
 }
 
-// --- SCREENS ---
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
   @override
@@ -212,44 +210,107 @@ class _MenuScreenState extends State<MenuScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.waves, color: Colors.cyanAccent, size: 50),
-                  const Text("AQUANIMITY", style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8)),
+                  // Icon floats up from 30px down to its spot
+                  TweenAnimationBuilder<double>(
+                    key: UniqueKey(),
+                    tween: Tween(begin: 30.0, end: 0.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Transform.translate(
+                        offset: Offset(0, value),
+                        child: Opacity(
+                          opacity: (1 - (value / 30.0)).clamp(0, 1),
+                          child: const Icon(Icons.waves, color: Colors.cyanAccent, size: 50),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Title floats up slightly after
+                  TweenAnimationBuilder<double>(
+                    key: UniqueKey(),
+                    tween: Tween(begin: 20.0, end: 0.0),
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Transform.translate(
+                        offset: Offset(0, value),
+                        child: const Text(
+                          "AQUANIMITY", 
+                          style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8)
+                        ),
+                      );
+                    },
+                  ),
                   
-                  Transform.rotate(
-                    angle: -0.1,
+                  // Splash text slides and tilts into place
+                  TweenAnimationBuilder<double>(
+                    key: UniqueKey(),
+                    tween: Tween(begin: 1.0, end: 0.0),
+                    duration: const Duration(milliseconds: 1200),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) {
+                      return Transform.translate(
+                        offset: Offset(0, value * 15),
+                        child: Transform.rotate(
+                          angle: -0.1 * value,
+                          child: child,
+                        ),
+                      );
+                    },
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.7,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(splashText, style: const TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 10, color: Colors.black)])),
+                        child: Text(
+                          splashText,
+                          style: const TextStyle(
+                            color: Colors.yellowAccent, 
+                            fontWeight: FontWeight.bold, 
+                            shadows: [Shadow(blurRadius: 10, color: Colors.black)]
+                          ),
+                        ),
                       ),
                     ),
                   ),
 
                   const SizedBox(height: 40),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(13),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.cyanAccent.withAlpha(77)),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text("LOGBOOK TOTAL", style: TextStyle(color: Colors.cyanAccent, fontSize: 14)),
-                        Text("$totalMetersSaved m", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                        const Divider(color: Colors.white10),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
-                            const SizedBox(width: 8),
-                            Text("$totalCoins Coins", style: const TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold)),
-                          ],
-                        )
-                      ],
-                    ),
+                  // Stat card fades and scales in
+                  TweenAnimationBuilder<double>(
+                    key: UniqueKey(),
+                    tween: Tween(begin: 0.8, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(13),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.cyanAccent.withAlpha(100)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text("LOGBOOK TOTAL", style: TextStyle(color: Colors.cyanAccent, fontSize: 14)),
+                              Text("$totalMetersSaved m", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                              const Divider(color: Colors.white10),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text("$totalCoins Coins", style: const TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold)),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),
@@ -268,13 +329,22 @@ class _MenuScreenState extends State<MenuScreen> {
                   _menuButton("LAUNCH SUB", Colors.cyanAccent[700]!, () async {
                     int mins = int.tryParse(_timeController.text) ?? 5;
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => DiveScreen(durationMinutes: mins == 0 ? -1 : mins)));
-                    if (context.mounted) _loadHistory();
+                    if (context.mounted) {
+                      _loadHistory();
+                      setState(() {}); 
+                    }
                   }),
                   _menuButton("TREASURE VAULT", Colors.purpleAccent[700]!, () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
-                    if (context.mounted) _loadHistory();
+                    if (context.mounted) {
+                      _loadHistory();
+                      setState(() {}); 
+                    }
                   }),
-                  _menuButton("DEPTH STATS", Colors.blueGrey[800]!, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen()))),
+                  _menuButton("DEPTH STATS", Colors.blueGrey[800]!, () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen()));
+                    if (context.mounted) setState(() {}); 
+                  }),
                 ],
               ),
             ),
@@ -310,7 +380,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
   String statusMessage = "Pressure Seals: Nominal";
   late AnimationController _radarController;
 
-  // PDA State
   String pdaMessage = "";
   Color pdaColor = Colors.cyanAccent;
   bool showPDA = false;
@@ -376,7 +445,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       setState(() {
         secondsPassed++;
 
-        // Threshold checks for PDA
         if (secondsPassed == 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: SCANNING NEW SIGNATURES", Colors.purpleAccent);
           reachedMilestones.add(350);
@@ -474,7 +542,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
       body: SafeArea(
         child: Stack(
           children: [
-            // PDA OVERLAY
             PDANotification(
               message: pdaMessage,
               color: pdaColor,
