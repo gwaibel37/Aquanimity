@@ -330,12 +330,15 @@ class DiveScreen extends StatefulWidget {
   State<DiveScreen> createState() => _DiveScreenState();
 }
 
-class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   int secondsPassed = 0;
   bool isDiving = false;
   Timer? timer;
   String statusMessage = "Pressure Seals: Nominal";
+  
   late AnimationController _radarController;
+  late AnimationController _subFloatController;
+  
   String pdaMessage = "";
   Color pdaColor = Colors.cyanAccent;
   bool showPDA = false;
@@ -347,12 +350,14 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _radarController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _subFloatController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _radarController.dispose();
+    _subFloatController.dispose();
     timer?.cancel();
     pdaDismissTimer?.cancel();
     super.dispose();
@@ -431,13 +436,16 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
   @override
   Widget build(BuildContext context) {
     String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
+    final double screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Color.lerp(Colors.blue[900], Colors.black, (secondsPassed / 1000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [
             PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
-            // RESTORED BACK BUTTON: Visible when not diving
+            
+            // Back Button
             if (!isDiving) 
               Positioned(
                 top: 10,
@@ -447,18 +455,43 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Si
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
+
+            // Submarine Animation
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 2000),
+              curve: Curves.easeInOutCubic,
+              top: isDiving ? screenHeight : screenHeight * 0.15,
+              left: 0,
+              right: 0,
+              child: AnimatedBuilder(
+                animation: _subFloatController,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, isDiving ? 0 : _subFloatController.value * 15),
+                    child: Column(
+                      children: [
+                        Icon(Icons.directions_boat, color: Colors.cyanAccent.withAlpha(isDiving ? 100 : 255), size: 60),
+                        if (!isDiving) const Icon(Icons.keyboard_double_arrow_down, color: Colors.cyanAccent, size: 20),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
             Positioned(top: 20, left: 60, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text("TARGET DEPTH", style: TextStyle(fontSize: 10, color: Colors.cyanAccent, letterSpacing: 1)),
               Text(targetDisplay, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ])),
+
             if (isDiving) Positioned(top: 20, right: 20, child: AnimatedBuilder(animation: _radarController, builder: (context, child) => Transform.rotate(angle: _radarController.value * 2 * math.pi, child: Icon(Icons.track_changes, color: Colors.cyanAccent.withAlpha(128), size: 40)))),
+            
             Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text("$secondsPassed m", style: TextStyle(fontSize: 90, fontWeight: FontWeight.w100, color: Colors.cyanAccent, shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withAlpha(128))])),
               Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2)),
               const SizedBox(height: 80),
               if (!isDiving && secondsPassed == 0) ElevatedButton(onPressed: startDive, child: const Text("ENGAGE ENGINES")),
               if (isDiving) OutlinedButton(onPressed: () => stopDive(), child: const Text("INITIATE ASCENT")),
-              // SECONDARY BACK BUTTON: Visible only if we just finished a dive but haven't reset
               if (!isDiving && secondsPassed > 0) TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back), label: const Text("BACK TO SHIP")),
             ])),
           ],
