@@ -117,7 +117,7 @@ class Treasure {
       // Epic: Only after 350m
       Rarity.epic: (depth >= 350) ? 5.0 + (depth / 50) : 0.0,
       // Rare: Always available (acts as the new "Common" in the deep)
-      Rarity.rare: 10.0 + (depth / 40),
+      Rarity.rare: (depth >= 1200) ? 0.0 : 10.0 + (depth / 40),
       // Uncommon: DISAPPEARS after 1000m
       Rarity.uncommon: (depth >= 1000) ? 0.0 : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
       // Common: DISAPPEARS after 600m
@@ -396,9 +396,10 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       setState(() {
         secondsPassed += testMultiplier;
         if (secondsPassed == 350 && !reachedMilestones.contains(350)) { _triggerPDA("EPIC TIER REACHED: DISCOVERING NEW SIGNATURES", Colors.purpleAccent); reachedMilestones.add(350); }
-        else if (secondsPassed == 600 && !reachedMilestones.contains(600)) { _triggerPDA("LEGENDARY FOUND ON SCANNER: COMMON SIGNATURES FADING", Colors.amber); reachedMilestones.add(600); }
+        else if (secondsPassed == 600 && !reachedMilestones.contains(600)) { _triggerPDA("LEGENDARY TREASURE FOUND ON SCANNER: COMMON SIGNATURES FADING", Colors.amber); reachedMilestones.add(600); }
         else if (secondsPassed == 900 && !reachedMilestones.contains(900)) { _triggerPDA("MYTHIC TIER REACHED: ECOLOGICAL DATA REQUIRED", Colors.redAccent); reachedMilestones.add(900); }
         else if (secondsPassed == 1000 && !reachedMilestones.contains(1000)) { _triggerPDA("WARNING: UNCHARTED WATERS REACHED. NO UNCOMMON SIGNATURES DETECTED", const Color.fromARGB(255, 59, 44, 143)); reachedMilestones.add(1000); }
+        else if (secondsPassed == 1200 && !reachedMilestones.contains(1200)) { _triggerPDA("WARNING: UNSEEN DEPTHS AHEAD. RARE SIGNATURES FADING", const Color.fromARGB(255, 33, 25, 73)); reachedMilestones.add(1200); }
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
