@@ -88,12 +88,12 @@ class PDANotification extends StatelessWidget {
 
 // --- IMPROVED TREASURE SYSTEM ---
 enum Rarity {
-  common(Colors.grey, 15),
-  uncommon(Colors.greenAccent, 50),
-  rare(Colors.blueAccent, 100),
-  epic(Colors.purpleAccent, 200),
-  legendary(Colors.amber, 500),
-  mythic(Colors.redAccent, 1000);
+  common(Colors.grey, 10),
+  uncommon(Colors.greenAccent, 40),
+  rare(Colors.blueAccent, 125),
+  epic(Colors.purpleAccent, 450),
+  legendary(Colors.amber, 1750),
+  mythic(Colors.redAccent, 5000);
 
   final Color color;
   final int value;
@@ -110,12 +110,18 @@ class Treasure {
     final random = math.Random();
 
     final Map<Rarity, double> weights = {
-      Rarity.mythic: (depth >= 900) ? 0.05 + (depth / 150) : 0.0,
-      Rarity.legendary: (depth >= 600) ? 0.5 + (depth / 80) : 0.0,
-      Rarity.epic: (depth >= 350) ? 2.0 + (depth / 40) : 0.0,
-      Rarity.rare: 10.0 + (depth / 20),
-      Rarity.uncommon: 40.0 + (depth / 10),
-      Rarity.common: 150.0,
+      // Mythic: Only after 900m
+      Rarity.mythic: (depth >= 900) ? 1.0 + (depth / 60) : 0.0,
+      // Legendary: Only after 600m
+      Rarity.legendary: (depth >= 600) ? 2.0 + (depth / 60) : 0.0,
+      // Epic: Only after 350m
+      Rarity.epic: (depth >= 350) ? 5.0 + (depth / 50) : 0.0,
+      // Rare: Always available (acts as the new "Common" in the deep)
+      Rarity.rare: 10.0 + (depth / 40),
+      // Uncommon: DISAPPEARS after 1000m
+      Rarity.uncommon: (depth >= 1000) ? 0.0 : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
+      // Common: DISAPPEARS after 600m
+      Rarity.common: (depth >= 600) ? 0.0 : math.max(5.0, 150.0 - (depth / 5)),
     };
 
     double totalWeight = weights.values.fold(0.0, (sum, w) => sum + w);
@@ -383,14 +389,16 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
+    int testMultiplier = 20;
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
-        secondsPassed++;
-        if (secondsPassed == 350 && !reachedMilestones.contains(350)) { _triggerPDA("EPIC TIER REACHED: SCANNING NEW SIGNATURES", Colors.purpleAccent); reachedMilestones.add(350); }
-        else if (secondsPassed == 600 && !reachedMilestones.contains(600)) { _triggerPDA("LEGENDARY TIER REACHED: ANOMALOUS MASS DETECTED", Colors.amber); reachedMilestones.add(600); }
+        secondsPassed += testMultiplier;
+        if (secondsPassed == 350 && !reachedMilestones.contains(350)) { _triggerPDA("EPIC TIER REACHED: DISCOVERING NEW SIGNATURES", Colors.purpleAccent); reachedMilestones.add(350); }
+        else if (secondsPassed == 600 && !reachedMilestones.contains(600)) { _triggerPDA("LEGENDARY FOUND ON SCANNER: COMMON SIGNATURES FADING", Colors.amber); reachedMilestones.add(600); }
         else if (secondsPassed == 900 && !reachedMilestones.contains(900)) { _triggerPDA("MYTHIC TIER REACHED: ECOLOGICAL DATA REQUIRED", Colors.redAccent); reachedMilestones.add(900); }
+        else if (secondsPassed == 1000 && !reachedMilestones.contains(1000)) { _triggerPDA("WARNING: UNCHARTED WATERS REACHED. NO UNCOMMON SIGNATURES DETECTED", const Color.fromARGB(255, 59, 44, 143)); reachedMilestones.add(1000); }
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
@@ -627,12 +635,12 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  int success = 0, forfeit = 0, lost = 0;
+  int success = 0, forfeit = 0, lost = 0, totalDepth = 0;
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() { success = prefs.getInt('successful_dives') ?? 0; forfeit = prefs.getInt('forfeit_dives') ?? 0; lost = prefs.getInt('meters_lost') ?? 0; });
+    setState(() { success = prefs.getInt('successful_dives') ?? 0; forfeit = prefs.getInt('forfeit_dives') ?? 0; lost = prefs.getInt('meters_lost') ?? 0; totalDepth = prefs.getInt('total_depth') ?? 0; });
   }
   @override
   Widget build(BuildContext context) {
@@ -643,9 +651,11 @@ class _StatsScreenState extends State<StatsScreen> {
             const OneShotFloat(child: Icon(Icons.analytics, color: Colors.blueAccent, size: 50)),
             const OneShotFloat(delayMs: 200, child: Text("STATISTICS", style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 8))),
             const SizedBox(height: 20),
+            OneShotFloat(delayMs: 200, child: _buildStatCard("TOTAL DIVE ATTEMPTS:", "${success + forfeit}", Colors.white70)),
             OneShotFloat(delayMs: 400, child: _buildStatCard("SUCCESSFUL EXPEDITIONS", "$success", Colors.greenAccent)),
-            OneShotFloat(delayMs: 600, child: _buildStatCard("HULL BREACHES", "$forfeit", Colors.orangeAccent)),
-            OneShotFloat(delayMs: 800, child: _buildStatCard("METERS LOST TO SEA", "$lost m", Colors.redAccent)),
+            OneShotFloat(delayMs: 600, child: _buildStatCard("SUCCESSFUL DEPTH", "$totalDepth m", Colors.greenAccent)),
+            OneShotFloat(delayMs: 800, child: _buildStatCard("HULL BREACHES", "$forfeit", Colors.orangeAccent)),
+            OneShotFloat(delayMs: 1000, child: _buildStatCard("METERS LOST TO SEA", "$lost m", Colors.redAccent)),
             const SizedBox(height: 40),
             TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back), label: const Text("BACK TO SHIP")),
           ])),
