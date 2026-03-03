@@ -12,12 +12,12 @@
 ### 2. The Treasure System
 * **Salvage:** Upon completing a successful dive, a random treasure is generated based on the depth reached. 
 * **Rarity Tiers:**
-  * ⚪ **Common:** Rusty Anchor
-  * 🟢 **Uncommon:** Bio-Luminescent Kelp
-  * 🔵 **Rare:** Sunken Coin
-  * 🟣 **Epic:** Pearl of Atlas
-  * 🟡 **Legendary:** Golden Trident
-  * 🔴 **Mythic:** Abyssal Relic
+  * ⚪ **Common:** 
+  * 🟢 **Uncommon:** 
+  * 🔵 **Rare:**
+  * 🟣 **Epic:** 
+  * 🟡 **Legendary:** 
+  * 🔴 **Mythic:** 
 * **Duplicates & Coins:** If you salvage an item already in your vault, it is automatically converted into **Coins** based on its rarity value.
 
 ### 3. The Treasure Vault
