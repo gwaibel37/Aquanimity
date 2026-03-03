@@ -389,7 +389,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    int testMultiplier = 20;
+    int testMultiplier = 2000; //Time Change: Increase this value to speed up the dive for testing purposes (e.g., 20 means 1 real second equals 20 in-game seconds)
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
