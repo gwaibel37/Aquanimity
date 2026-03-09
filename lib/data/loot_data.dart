@@ -1,5 +1,5 @@
 // loot_data.dart
-import 'main.dart'; 
+import '../models/treasure.dart';
 
 const Map<Rarity, List<String>> treasurePool = {
   Rarity.mythic: [
