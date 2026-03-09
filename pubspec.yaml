@@ -28,5 +28,8 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/logo.png"
-  adaptive_icon_background: "assets/logo.png" #Sets it in the foreground for Android
-  remove_alpha_ios: true # Optional: removes alpha channel for iOS icons
+  # Use a hex color for the background to create natural padding
+  adaptive_icon_background: "#cc0000" 
+  adaptive_icon_foreground: "assets/logo.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21
