@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Import your new modular files
 import 'screens/dive_screen.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/stats_screen.dart';
@@ -40,6 +39,7 @@ class _MenuScreenState extends State<MenuScreen> {
   final TextEditingController _timeController = TextEditingController(text: "5");
   int totalMetersSaved = 0;
   int totalCoins = 0;
+  int currentStreak = 0; // New variable
   
   String splashText = "";
   final List<String> splashes = [
@@ -64,8 +64,9 @@ class _MenuScreenState extends State<MenuScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      totalMetersSaved = prefs.getInt('total_depth') ?? 0;
-      totalCoins = prefs.getInt('total_coins') ?? 0;
+      totalMetersSaved = prefs.getInt('total_depth') ?? 0; //
+      totalCoins = prefs.getInt('total_coins') ?? 0; //
+      currentStreak = prefs.getInt('current_streak') ?? 0; // Fetches the new streak key
     });
   }
 
@@ -107,11 +108,15 @@ class _MenuScreenState extends State<MenuScreen> {
                           Text("$totalMetersSaved m", style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                           const Divider(color: Colors.white10),
                           Row(
-                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
                               const SizedBox(width: 8),
-                              Text("$totalCoins Coins", style: const TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold)),
+                              Text("$totalCoins", style: const TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 20),
+                              const Icon(Icons.local_fire_department, color: Colors.orangeAccent, size: 20),
+                              const SizedBox(width: 8),
+                              Text("$currentStreak", style: const TextStyle(fontSize: 18, color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
                             ],
                           )
                         ],

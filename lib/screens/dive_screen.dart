@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
-// Your Modular Imports
 import '../models/treasure.dart';
 import '../widgets/shared_widgets.dart';
 import 'mission_report_screen.dart';
@@ -72,14 +71,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    int testMultiplier = 1000000; // Adjust for testing speed
+    int testMultiplier = 100; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
         secondsPassed += testMultiplier;
         
-        // Milestone Triggers
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
           reachedMilestones.add(350);
@@ -91,6 +89,28 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
+  }
+
+  // Logic to handle the daily streak
+  Future<void> _updateStreak(SharedPreferences prefs) async {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month}-${now.day}";
+    final yesterday = now.subtract(const Duration(days: 1));
+    final yesterdayStr = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
+
+    String lastDate = prefs.getString('last_dive_date') ?? "";
+    int currentStreak = prefs.getInt('current_streak') ?? 0;
+
+    if (lastDate == todayStr) {
+      return; // Already dived today
+    } else if (lastDate == yesterdayStr || lastDate == "") {
+      currentStreak++; // Continued streak or first dive ever
+    } else {
+      currentStreak = 1; // Streak was broken
+    }
+
+    await prefs.setString('last_dive_date', todayStr);
+    await prefs.setInt('current_streak', currentStreak);
   }
 
   Future<void> stopDive({bool wasforced = false}) async {
@@ -105,6 +125,10 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
 
     if (isSuccessful) {
       await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
+      
+      // Update the streak when a dive is successful
+      await _updateStreak(prefs);
+
       foundLoot = Treasure.generate(finalDepth);
       List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
       isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == foundLoot!.name);
@@ -143,10 +167,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       body: SafeArea(
         child: Stack(
           children: [
-            // PDA Notifications
             PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
-            
-            // Submarine Icon
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,
@@ -155,8 +176,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
               right: 0,
               child: Icon(Icons.directions_boat, color: Colors.cyanAccent.withAlpha(isDiving ? 50 : 255), size: 60),
             ),
-
-            // Top Info Bar
             Positioned(
               top: 20,
               left: 20,
@@ -168,8 +187,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                 ],
               ),
             ),
-
-            // Radar Icon
             if (isDiving) 
               Positioned(
                 top: 20,
@@ -182,8 +199,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                   ),
                 ),
               ),
-
-            // Center UI with Scroll Protection
             Center(
               child: SingleChildScrollView(
                 child: Column(
