@@ -17,6 +17,8 @@ class AquanimityApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
+        // Ensure standard Material 3 behavior for a modern feel
+        useMaterial3: true,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -39,7 +41,7 @@ class _MenuScreenState extends State<MenuScreen> {
   final TextEditingController _timeController = TextEditingController(text: "5");
   int totalMetersSaved = 0;
   int totalCoins = 0;
-  int currentStreak = 0; // New variable
+  int currentStreak = 0; 
   
   String splashText = "";
   final List<String> splashes = [
@@ -60,19 +62,21 @@ class _MenuScreenState extends State<MenuScreen> {
     splashText = splashes[math.Random().nextInt(splashes.length)];
   }
 
+  // Refreshes the UI by pulling the latest totals from SharedPreferences
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      totalMetersSaved = prefs.getInt('total_depth') ?? 0; //
-      totalCoins = prefs.getInt('total_coins') ?? 0; //
-      currentStreak = prefs.getInt('current_streak') ?? 0; // Fetches the new streak key
+      totalMetersSaved = prefs.getInt('total_depth') ?? 0;
+      totalCoins = prefs.getInt('total_coins') ?? 0;
+      currentStreak = prefs.getInt('current_streak') ?? 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // AbyssalBackground provides the thematic dark blue gradient
       body: AbyssalBackground(
         child: SafeArea(
           child: Center(
@@ -93,6 +97,8 @@ class _MenuScreenState extends State<MenuScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
+                  
+                  // Stats Dashboard
                   OneShotFloat(
                     delayMs: 600,
                     child: Container(
@@ -123,27 +129,39 @@ class _MenuScreenState extends State<MenuScreen> {
                       ),
                     ),
                   ),
+                  
                   const SizedBox(height: 20),
                   const Text("Dive Duration (Mins):", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  
+                  // Duration Input
                   SizedBox(
                     width: 100,
                     child: TextField(
                       controller: _timeController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      decoration: const InputDecoration(focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent))),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.cyanAccent),
+                      decoration: const InputDecoration(
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.cyanAccent)),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                      ),
                     ),
                   ),
+                  
                   const SizedBox(height: 40),
+                  
                   _menuButton("LAUNCH SUB", Colors.cyanAccent[700]!, () async {
                     int mins = int.tryParse(_timeController.text) ?? 5;
+                    // Passing -1 for infinite/test mode if mins is 0
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => DiveScreen(durationMinutes: mins == 0 ? -1 : mins)));
-                    if (mounted) { _loadHistory(); }
+                    if (mounted) _loadHistory(); 
                   }),
+                  
                   _menuButton("TREASURE VAULT", Colors.purpleAccent[700]!, () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
-                    if (mounted) { _loadHistory(); }
+                    if (mounted) _loadHistory(); // Refresh in case items were sold for coins
                   }),
+                  
                   _menuButton("DEPTH STATS", Colors.blueGrey[800]!, () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen()));
                     if (mounted) _loadHistory(); 
@@ -164,10 +182,11 @@ class _MenuScreenState extends State<MenuScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color, 
           foregroundColor: Colors.white, 
-          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 22)
+          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 22),
+          elevation: 10,
         ),
         onPressed: pressed,
-        child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2)),
       ),
     );
   }

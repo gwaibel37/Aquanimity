@@ -29,7 +29,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     setState(() {
       items = savedItems.map((item) => jsonDecode(item) as Map<String, dynamic>).toList();
       totalCoins = prefs.getInt('total_coins') ?? 0;
-      _applySort(); // Initial sort
+      _applySort(); 
     });
   }
 
@@ -37,14 +37,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     setState(() {
       switch (_currentSort) {
         case SortMode.newest:
-          // Items are stored in chronological order; show last added first
           items = items.reversed.toList(); 
           break;
         case SortMode.rarity:
           items.sort((a, b) {
             final rA = Rarity.values.firstWhere((e) => e.name == a['rarity']).index;
             final rB = Rarity.values.firstWhere((e) => e.name == b['rarity']).index;
-            return rB.compareTo(rA); // Higher index (Mythic) first
+            return rB.compareTo(rA);
           });
           break;
         case SortMode.value:
@@ -67,7 +66,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
-    // We save the current list state
     await prefs.setStringList('treasure_inventory', items.map((i) => jsonEncode(i)).toList());
     await prefs.setInt('total_coins', totalCoins);
   }
@@ -104,7 +102,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const SizedBox(height: 10),
               const Text("TREASURE VAULT", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 4)),
               
-              // Stats & Sort Row
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                 child: Row(
@@ -117,7 +114,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         Text("$totalCoins", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
                       ],
                     ),
-                    // THE SORT BUTTON
                     TextButton.icon(
                       style: TextButton.styleFrom(backgroundColor: Colors.white10, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                       onPressed: _toggleSort,
@@ -128,7 +124,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
 
-              // Bulk Sell Quick-Actions
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
@@ -148,7 +143,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
 
-              // The Compact Grid
               Expanded(
                 child: items.isEmpty
                     ? const Center(child: Text("NO CARGO DETECTED", style: TextStyle(color: Colors.white24, letterSpacing: 2)))
@@ -156,7 +150,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         padding: const EdgeInsets.all(15),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 2.8,
+                          childAspectRatio: 2.2, 
                           crossAxisSpacing: 10,
                           mainAxisSpacing: 10,
                         ),
@@ -164,17 +158,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         itemBuilder: (context, index) {
                           final item = items[index];
                           final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: rarity.color.withAlpha(20),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: rarity.color.withAlpha(80), width: 1),
-                            ),
-                            child: ListTile(
-                              visualDensity: VisualDensity.compact,
-                              leading: Icon(Icons.token, color: rarity.color, size: 16),
-                              title: Text(item['name'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
-                              subtitle: Text("${rarity.value}c", style: TextStyle(color: rarity.color, fontSize: 9)),
+                          final String heroTag = "treasure_${item['name']}_$index";
+
+                          return Hero(
+                            tag: heroTag,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.push(
+                                  context, 
+                                  MaterialPageRoute(builder: (context) => TreasureDetailScreen(item: item, rarity: rarity, heroTag: heroTag))
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: rarity.color.withAlpha(20),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: rarity.color.withAlpha(80), width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 10),
+                                      Icon(Icons.token, color: rarity.color, size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                            Text("${rarity.value}c", style: TextStyle(color: rarity.color, fontSize: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         },
@@ -183,6 +203,62 @@ class _InventoryScreenState extends State<InventoryScreen> {
               
               TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close), label: const Text("CLOSE VAULT")),
               const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TreasureDetailScreen extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final Rarity rarity;
+  final String heroTag;
+
+  const TreasureDetailScreen({super.key, required this.item, required this.rarity, required this.heroTag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AbyssalBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+              ),
+              const Spacer(),
+              Hero(
+                tag: heroTag,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Icon(Icons.token, color: rarity.color, size: 100),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(item['name'], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              Text(rarity.name.toUpperCase(), style: TextStyle(color: rarity.color, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 4)),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                child: Divider(color: Colors.white10),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Text(
+                  item['description'] ?? "A mysterious object recovered from the ocean floor. Its surface feels strangely cold to the touch.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.5),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
+                child: Text("VALUE: ${rarity.value} COINS", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
