@@ -18,11 +18,18 @@ enum Rarity {
 class Treasure {
   final String name;
   final Rarity rarity;
+  final String description; // New field for the flavor text
 
-  Treasure(this.name, this.rarity);
+  Treasure({
+    required this.name, 
+    required this.rarity, 
+    required this.description
+  });
 
   static Treasure generate(int depth) {
     final random = math.Random();
+    
+    // Your depth-based weight logic (kept intact because it's well-balanced!)
     final Map<Rarity, double> weights = {
       Rarity.mythic: (depth >= 900) ? 1.0 + (depth / 60) : 0.0,
       Rarity.legendary: (depth >= 600) ? 2.0 + (depth / 60) : 0.0,
@@ -35,17 +42,48 @@ class Treasure {
     double totalWeight = weights.values.fold(0.0, (sum, w) => sum + w);
     double roll = random.nextDouble() * totalWeight;
     double cursor = 0;
+
     for (Rarity r in Rarity.values) {
-      cursor += weights[r]!;
-      if (roll < cursor) return Treasure(_getItemName(r), r);
+      cursor += weights[r] ?? 0.0;
+      if (roll < cursor) {
+        return _createTreasureFromPool(r);
+      }
     }
-    return Treasure("Rusty Anchor", Rarity.common);
+    
+    // Hard fallback just in case the abyss stares back too hard
+    return _createTreasureFromPool(Rarity.common);
   }
 
-  static String _getItemName(Rarity rarity) {
-    final list = treasurePool[rarity] ?? ["Strange Object"];
-    return list[math.Random().nextInt(list.length)];
+  static Treasure _createTreasureFromPool(Rarity rarity) {
+    final random = math.Random();
+    // Accessing the new Map structure: TreasureData.treasurePool[rarity]
+    final pool = TreasureData.treasurePool[rarity] ?? {"Mystery Object": "A strange glitch in the sonar."};
+    
+    // Pick a random key (the name)
+    String name = pool.keys.elementAt(random.nextInt(pool.length));
+    // Get the corresponding value (the description)
+    String description = pool[name]!;
+
+    return Treasure(
+      name: name,
+      rarity: rarity,
+      description: description,
+    );
   }
 
-  Map<String, String> toMap() => {'name': name, 'rarity': rarity.name};
+  // Converts the object to a Map for JSON encoding
+  Map<String, dynamic> toMap() => {
+    'name': name, 
+    'rarity': rarity.name,
+    'description': description,
+  };
+
+  // Useful for creating a Treasure object back from SharedPreferences
+  factory Treasure.fromMap(Map<String, dynamic> map) {
+    return Treasure(
+      name: map['name'] ?? "Unknown",
+      rarity: Rarity.values.firstWhere((e) => e.name == map['rarity'], orElse: () => Rarity.common),
+      description: map['description'] ?? "No description available.",
+    );
+  }
 }

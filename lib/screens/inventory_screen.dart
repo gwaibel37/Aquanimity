@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart'; // Added for feedback
 import '../models/treasure.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -27,6 +28,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final prefs = await SharedPreferences.getInstance();
     final List<String> savedItems = prefs.getStringList('treasure_inventory') ?? [];
     setState(() {
+      // Correctly parsing the JSON objects from SharedPreferences
       items = savedItems.map((item) => jsonDecode(item) as Map<String, dynamic>).toList();
       totalCoins = prefs.getInt('total_coins') ?? 0;
       _applySort(); 
@@ -37,6 +39,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     setState(() {
       switch (_currentSort) {
         case SortMode.newest:
+          // Showing the items in the order they were found (reversed for newest first)
           items = items.reversed.toList(); 
           break;
         case SortMode.rarity:
@@ -70,7 +73,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     await prefs.setInt('total_coins', totalCoins);
   }
 
-  void _bulkSell(Rarity rarity) {
+  void _bulkSell(Rarity rarity) async {
     int count = 0;
     int gain = 0;
     setState(() {
@@ -84,10 +87,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
       });
       totalCoins += gain;
     });
+
     if (count > 0) {
-      _saveState();
+      if (await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
+      await _saveState();
+      if(!mounted) return; // Safety check before showing SnackBar
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: rarity.color.withAlpha(200), content: Text("Sold $count ${rarity.name} items for $gain coins!", style: const TextStyle(fontWeight: FontWeight.bold)))
+        SnackBar(
+          backgroundColor: rarity.color.withAlpha(200), 
+          content: Text("Liquidated $count ${rarity.name} items for $gain coins!", 
+          style: const TextStyle(fontWeight: FontWeight.bold))
+        )
       );
     }
   }
@@ -109,16 +119,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
-                        const SizedBox(width: 5),
-                        Text("$totalCoins", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
+                        const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                        const SizedBox(width: 8),
+                        Text("$totalCoins", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20)),
                       ],
                     ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(backgroundColor: Colors.white10, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                      onPressed: _toggleSort,
-                      icon: const Icon(Icons.sort, size: 16, color: Colors.cyanAccent),
+                    ActionChip(
                       label: Text(_currentSort.name.toUpperCase(), style: const TextStyle(color: Colors.cyanAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                      avatar: const Icon(Icons.sort, size: 14, color: Colors.cyanAccent),
+                      backgroundColor: Colors.white10,
+                      onPressed: _toggleSort,
                     ),
                   ],
                 ),
@@ -134,7 +144,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
                         label: Text("Sell ${r.name}", style: const TextStyle(fontSize: 10, color: Colors.white)),
-                        backgroundColor: hasItems ? r.color.withAlpha(50) : Colors.transparent,
+                        backgroundColor: hasItems ? r.color.withAlpha(40) : Colors.transparent,
                         side: BorderSide(color: hasItems ? r.color : Colors.white10),
                         onPressed: hasItems ? () => _bulkSell(r) : null,
                       ),
@@ -145,11 +155,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               Expanded(
                 child: items.isEmpty
-                    ? const Center(child: Text("NO CARGO DETECTED", style: TextStyle(color: Colors.white24, letterSpacing: 2)))
+                    ? const Center(child: Text("VAULT IS EMPTY", style: TextStyle(color: Colors.white24, letterSpacing: 2)))
                     : GridView.builder(
                         padding: const EdgeInsets.all(15),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 250,
                           childAspectRatio: 2.2, 
                           crossAxisSpacing: 10,
                           mainAxisSpacing: 10,
@@ -158,7 +168,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         itemBuilder: (context, index) {
                           final item = items[index];
                           final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
-                          final String heroTag = "treasure_${item['name']}_$index";
+                          // Hero tags must be unique even if items have the same name
+                          final String heroTag = "treasure_${item['name']}_${item['rarity']}_$index";
 
                           return Hero(
                             tag: heroTag,
@@ -172,22 +183,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: rarity.color.withAlpha(20),
+                                    color: rarity.color.withAlpha(15),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: rarity.color.withAlpha(80), width: 1),
+                                    border: Border.all(color: rarity.color.withAlpha(60), width: 1.5),
                                   ),
                                   child: Row(
                                     children: [
-                                      const SizedBox(width: 10),
-                                      Icon(Icons.token, color: rarity.color, size: 20),
-                                      const SizedBox(width: 10),
+                                      const SizedBox(width: 12),
+                                      Icon(Icons.token, color: rarity.color, size: 24),
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
-                                            Text("${rarity.value}c", style: TextStyle(color: rarity.color, fontSize: 11)),
+                                            Text("${rarity.value}c", style: TextStyle(color: rarity.color.withAlpha(180), fontSize: 11, fontWeight: FontWeight.w600)),
                                           ],
                                         ),
                                       ),
@@ -201,8 +212,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
               ),
               
-              TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close), label: const Text("CLOSE VAULT")),
               const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () => Navigator.pop(context), 
+                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white38), 
+                label: const Text("CLOSE VAULT", style: TextStyle(color: Colors.white38))
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -227,38 +243,72 @@ class TreasureDetailScreen extends StatelessWidget {
             children: [
               Align(
                 alignment: Alignment.topLeft,
-                child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back), 
+                  onPressed: () => Navigator.pop(context)
+                ),
               ),
               const Spacer(),
               Hero(
                 tag: heroTag,
                 child: Material(
                   color: Colors.transparent,
-                  child: Icon(Icons.token, color: rarity.color, size: 100),
+                  child: Icon(Icons.token, color: rarity.color, size: 120),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(item['name'], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 2)),
-              Text(rarity.name.toUpperCase(), style: TextStyle(color: rarity.color, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 4)),
+              const SizedBox(height: 30),
+              Text(
+                item['name'].toUpperCase(), 
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: 2)
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: rarity.color.withAlpha(30),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: rarity.color.withAlpha(100))
+                ),
+                child: Text(
+                  rarity.name.toUpperCase(), 
+                  style: TextStyle(color: rarity.color, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)
+                ),
+              ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 30),
                 child: Divider(color: Colors.white10),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
-                  item['description'] ?? "A mysterious object recovered from the ocean floor. Its surface feels strangely cold to the touch.",
+                  // Handling the JSON description or providing a generic fallback
+                  item['description'] ?? "An uncharted treasure recovered from the crushing depths of the abyss. Its properties are yet to be fully understood.",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.5),
+                  style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.6, fontStyle: FontStyle.italic),
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
-                child: Text("VALUE: ${rarity.value} COINS", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                margin: const EdgeInsets.only(bottom: 50),
+                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.black38, 
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.amber.withAlpha(50))
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                    const SizedBox(width: 10),
+                    Text(
+                      "VALUE: ${rarity.value} COINS", 
+                      style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, letterSpacing: 1)
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 40),
             ],
           ),
         ),

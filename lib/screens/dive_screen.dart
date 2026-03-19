@@ -52,11 +52,19 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // If the user leaves the app during a dive, they get "the bends" (lose progress)
     if (isDiving && state == AppLifecycleState.paused) _triggerTheBends();
   }
 
   void _triggerTheBends() async {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("⚠️ HULL BREACH: THE BENDS!")));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text("⚠️ HULL BREACH: EMERGENCY ASCENT DETECTED!", style: TextStyle(fontWeight: FontWeight.bold))
+        )
+      );
+    }
     if (await Vibration.hasVibrator()) { 
       Vibration.vibrate(pattern: [0, 500, 200, 500]); 
     }
@@ -71,6 +79,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
+    // Note: Set testMultiplier to 1 for real-time, or keep it high for testing
     int testMultiplier = 100; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -78,6 +87,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       setState(() {
         secondsPassed += testMultiplier;
         
+        // Dynamic PDA notifications based on depth
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
           reachedMilestones.add(350);
@@ -86,12 +96,12 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
           reachedMilestones.add(600);
         }
 
+        // Auto-stop if target duration reached
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
   }
 
-  // Logic to handle the daily streak
   Future<void> _updateStreak(SharedPreferences prefs) async {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month}-${now.day}";
@@ -101,12 +111,12 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     String lastDate = prefs.getString('last_dive_date') ?? "";
     int currentStreak = prefs.getInt('current_streak') ?? 0;
 
-    if (lastDate == todayStr) {
-      return; // Already dived today
-    } else if (lastDate == yesterdayStr || lastDate == "") {
-      currentStreak++; // Continued streak or first dive ever
+    if (lastDate == todayStr) return; 
+    
+    if (lastDate == yesterdayStr || lastDate == "") {
+      currentStreak++; 
     } else {
-      currentStreak = 1; // Streak was broken
+      currentStreak = 1; 
     }
 
     await prefs.setString('last_dive_date', todayStr);
@@ -118,31 +128,37 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     timer = null;
     final int finalDepth = secondsPassed;
     final prefs = await SharedPreferences.getInstance();
+    
     Treasure? foundLoot;
     int coinReward = 0;
     bool isDuplicate = false;
     bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
+      // 1. Log Depth & Update Streak
       await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
-      
-      // Update the streak when a dive is successful
       await _updateStreak(prefs);
 
+      // 2. Generate Loot (Now includes description via JSON logic)
       foundLoot = Treasure.generate(finalDepth);
+      
       List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
+      
+      // 3. Check for duplicates based on the Name key in the JSON
       isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == foundLoot!.name);
       
       if (isDuplicate) { 
         coinReward = foundLoot.rarity.value; 
         await prefs.setInt('total_coins', (prefs.getInt('total_coins') ?? 0) + coinReward); 
       } else { 
+        // 4. Save the full JSON map (including description) to the inventory
         inventory.add(jsonEncode(foundLoot.toMap())); 
         await prefs.setStringList('treasure_inventory', inventory); 
       }
     } else if (wasforced) {
+      // Penalty for "The Bends"
       int currentTotal = prefs.getInt('total_depth') ?? 0;
-      await prefs.setInt('total_depth', (currentTotal - finalDepth).clamp(0, 9999999));
+      await prefs.setInt('total_depth', (currentTotal - (finalDepth * 2)).clamp(0, 9999999));
     }
 
     if (!mounted) return;
@@ -163,34 +179,36 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
     return Scaffold(
-      backgroundColor: Color.lerp(const Color.fromARGB(255, 48, 138, 235), Colors.black, (secondsPassed / 2000).clamp(0, 1)),
+      // Gradient darkens as the user dives deeper
+      backgroundColor: Color.lerp(const Color.fromARGB(255, 35, 118, 226), Colors.black, (secondsPassed / 3000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [
             PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
+            
+            // Visual Submarine descent indicator
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,
               top: isDiving ? screenHeight : screenHeight * 0.15,
-              left: 0,
-              right: 0,
+              left: 0, right: 0,
               child: Icon(Icons.directions_boat, color: Colors.cyanAccent.withAlpha(isDiving ? 50 : 255), size: 60),
             ),
+
             Positioned(
-              top: 20,
-              left: 20,
+              top: 20, left: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("TARGET", style: TextStyle(fontSize: 10, color: Colors.cyanAccent)),
+                  const Text("TARGET", style: TextStyle(fontSize: 10, color: Colors.cyanAccent, letterSpacing: 1)),
                   Text(targetDisplay, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
+
             if (isDiving) 
               Positioned(
-                top: 20,
-                right: 20,
+                top: 20, right: 20,
                 child: AnimatedBuilder(
                   animation: _radarController,
                   builder: (context, child) => Transform.rotate(
@@ -199,6 +217,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                   ),
                 ),
               ),
+
             Center(
               child: SingleChildScrollView(
                 child: Column(
@@ -213,14 +232,25 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                         shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withAlpha(128))]
                       )
                     ),
-                    Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2, fontSize: 12)),
+                    Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2, fontSize: 12, color: Colors.white54)),
                     const SizedBox(height: 60),
                     if (!isDiving && secondsPassed == 0) 
-                      ElevatedButton(onPressed: startDive, child: const Text("ENGAGE ENGINES")),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent[700], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+                        onPressed: startDive, 
+                        child: const Text("ENGAGE ENGINES", style: TextStyle(fontWeight: FontWeight.bold))
+                      ),
                     if (isDiving) 
-                      OutlinedButton(onPressed: () => stopDive(), child: const Text("INITIATE ASCENT")),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.cyanAccent), foregroundColor: Colors.cyanAccent, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+                        onPressed: () => stopDive(), 
+                        child: const Text("INITIATE ASCENT", style: TextStyle(fontWeight: FontWeight.bold))
+                      ),
                     if (!isDiving)
-                      TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back), label: const Text("BACK TO SHIP")),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, size: 16), label: const Text("BACK TO SHIP")),
+                      ),
                   ],
                 ),
               ),

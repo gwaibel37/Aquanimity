@@ -1,8 +1,7 @@
  TODO:
- - The logbook needs successful depth as well as number of dives
  - Every 1000 meters change for unlocking Creatures
  - Daily lootboxes for successful dives (24 hour timer, once a day)
- - Streaks for daily dives
+ - Add weekly ranked system for total meters dived - each rank has emblems and it resets each week, past logbook of ranks + average rank
  - Add images and visuals rather stylized colors and symbols
  - Notifications during dives, notifications when daily streaks are about to expire, and when sunken treasure if availible
  - First dive a day gives you the highest teir item possible in the bracket of depth you end in
