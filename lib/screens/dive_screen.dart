@@ -52,7 +52,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // If the user leaves the app during a dive, they get "the bends" (lose progress)
     if (isDiving && state == AppLifecycleState.paused) _triggerTheBends();
   }
 
@@ -79,15 +78,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    // Note: Set testMultiplier to 1 for real-time, or keep it high for testing
-    int testMultiplier = 100; 
+    int testMultiplier = 100000; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
         secondsPassed += testMultiplier;
         
-        // Dynamic PDA notifications based on depth
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
           reachedMilestones.add(350);
@@ -96,7 +93,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
           reachedMilestones.add(600);
         }
 
-        // Auto-stop if target duration reached
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
@@ -135,28 +131,25 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
-      // 1. Log Depth & Update Streak
+      // 1. Log Depths
       await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
+      // UPDATED: Increment weekly depth for the rank system
+      await prefs.setInt('weekly_depth', (prefs.getInt('weekly_depth') ?? 0) + finalDepth);
+      
       await _updateStreak(prefs);
 
-      // 2. Generate Loot (Now includes description via JSON logic)
       foundLoot = Treasure.generate(finalDepth);
-      
       List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
-      
-      // 3. Check for duplicates based on the Name key in the JSON
       isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == foundLoot!.name);
       
       if (isDuplicate) { 
         coinReward = foundLoot.rarity.value; 
         await prefs.setInt('total_coins', (prefs.getInt('total_coins') ?? 0) + coinReward); 
       } else { 
-        // 4. Save the full JSON map (including description) to the inventory
         inventory.add(jsonEncode(foundLoot.toMap())); 
         await prefs.setStringList('treasure_inventory', inventory); 
       }
     } else if (wasforced) {
-      // Penalty for "The Bends"
       int currentTotal = prefs.getInt('total_depth') ?? 0;
       await prefs.setInt('total_depth', (currentTotal - (finalDepth * 2)).clamp(0, 9999999));
     }
@@ -179,14 +172,12 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
     return Scaffold(
-      // Gradient darkens as the user dives deeper
       backgroundColor: Color.lerp(const Color.fromARGB(255, 35, 118, 226), Colors.black, (secondsPassed / 3000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [
             PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
             
-            // Visual Submarine descent indicator
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,

@@ -60,9 +60,35 @@ class _MenuScreenState extends State<MenuScreen> {
     splashText = splashes[math.Random().nextInt(splashes.length)];
   }
 
+  // Logic to reset the weekly rank every Monday
+  Future<void> _handleWeeklyReset(SharedPreferences prefs) async {
+    final now = DateTime.now();
+    String lastReset = prefs.getString('last_weekly_reset') ?? "";
+    
+    // Find the most recent Monday
+    DateTime lastMonday = now.subtract(Duration(days: now.weekday - 1));
+    String currentMondayStr = "${lastMonday.year}-${lastMonday.month}-${lastMonday.day}";
+
+    if (lastReset != currentMondayStr) {
+      int weeklyDepth = prefs.getInt('weekly_depth') ?? 0;
+      List<String> history = prefs.getStringList('rank_history') ?? [];
+      
+      // Archive current progress if there was activity
+      if (weeklyDepth > 0) {
+        history.add("${now.month}/${now.day} | $weeklyDepth m | ARCHIVED");
+        await prefs.setStringList('rank_history', history);
+      }
+      
+      await prefs.setInt('weekly_depth', 0); // Reset for the new week
+      await prefs.setString('last_weekly_reset', currentMondayStr);
+    }
+  }
+
   // Refreshes the UI by pulling the latest totals from SharedPreferences
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
+    await _handleWeeklyReset(prefs); // Perform reset check on startup
+
     if (!mounted) return;
     setState(() {
       totalMetersSaved = prefs.getInt('total_depth') ?? 0;
@@ -102,9 +128,9 @@ class _MenuScreenState extends State<MenuScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(13),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.cyanAccent.withAlpha(100)),
+                        border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
                       ),
                       child: Column(
                         children: [
