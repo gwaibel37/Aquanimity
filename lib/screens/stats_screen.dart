@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/shared_widgets.dart';
+import '../data/database_helper.dart';
 
 // --- CUSTOM EMBLEM PAINTER ---
 class RankEmblem extends StatelessWidget {
@@ -122,14 +122,25 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final dbHelper = DatabaseHelper();
+    final userStats = await dbHelper.getUserStats();
+    final diveHistory = await dbHelper.getDiveHistory(includeArchived: true);
+    
+    // Convert dive history back to the string format expected by the UI
+    List<String> historyStrings = diveHistory.map((entry) {
+      String date = entry['date'];
+      int depth = entry['depth'];
+      String rank = entry['rank'];
+      return "$date | ${depth}m | $rank";
+    }).toList();
+    
     setState(() {
-      success = prefs.getInt('successful_dives') ?? 0;
-      forfeit = prefs.getInt('forfeit_dives') ?? 0;
-      totalDepth = prefs.getInt('total_depth') ?? 0;
-      currentStreak = prefs.getInt('current_streak') ?? 0;
-      weeklyMeters = prefs.getInt('weekly_depth') ?? 0;
-      rankHistory = prefs.getStringList('rank_history') ?? [];
+      success = userStats['successful_dives'] ?? 0;
+      forfeit = userStats['forfeit_dives'] ?? 0;
+      totalDepth = userStats['total_depth'] ?? 0;
+      currentStreak = userStats['current_streak'] ?? 0;
+      weeklyMeters = userStats['weekly_depth'] ?? 0;
+      rankHistory = historyStrings;
     });
   }
 

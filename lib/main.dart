@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/dive_screen.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/stats_screen.dart';
 import 'widgets/shared_widgets.dart';
+import 'data/database_helper.dart';
 
 void main() => runApp(const AquanimityApp());
 
@@ -39,7 +39,7 @@ class _MenuScreenState extends State<MenuScreen> {
   final TextEditingController _timeController = TextEditingController(text: "5");
   int totalMetersSaved = 0;
   int totalCoins = 0;
-  int currentStreak = 0; 
+  int currentStreak = 0;
   
   String splashText = "";
   final List<String> splashes = [
@@ -56,44 +56,61 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _initializeData();
     splashText = splashes[math.Random().nextInt(splashes.length)];
   }
 
+  // Initialize database and migrate data if needed
+  Future<void> _initializeData() async {
+    final dbHelper = DatabaseHelper();
+    
+    // Check if migration is needed
+    if (await dbHelper.needsMigration()) {
+      await dbHelper.migrateFromSharedPreferences();
+    }
+    
+    await _loadHistory();
+  }
+
   // Logic to reset the weekly rank every Monday
-  Future<void> _handleWeeklyReset(SharedPreferences prefs) async {
+  Future<void> _handleWeeklyReset() async {
+    final dbHelper = DatabaseHelper();
+    Map<String, dynamic> stats = await dbHelper.getUserStats();
+    
     final now = DateTime.now();
-    String lastReset = prefs.getString('last_weekly_reset') ?? "";
+    String lastReset = stats['last_weekly_reset'] ?? "";
     
     // Find the most recent Monday
     DateTime lastMonday = now.subtract(Duration(days: now.weekday - 1));
     String currentMondayStr = "${lastMonday.year}-${lastMonday.month}-${lastMonday.day}";
 
     if (lastReset != currentMondayStr) {
-      int weeklyDepth = prefs.getInt('weekly_depth') ?? 0;
-      List<String> history = prefs.getStringList('rank_history') ?? [];
+      int weeklyDepth = stats['weekly_depth'] ?? 0;
       
       // Archive current progress if there was activity
       if (weeklyDepth > 0) {
-        history.add("${now.month}/${now.day} | $weeklyDepth m | ARCHIVED");
-        await prefs.setStringList('rank_history', history);
+        await dbHelper.addDiveEntry("${now.month}/${now.day}", weeklyDepth, "ARCHIVED");
       }
       
-      await prefs.setInt('weekly_depth', 0); // Reset for the new week
-      await prefs.setString('last_weekly_reset', currentMondayStr);
+      // Reset weekly depth and update last reset date
+      await dbHelper.updateUserStats({
+        'weekly_depth': 0,
+        'last_weekly_reset': currentMondayStr,
+      });
     }
   }
 
-  // Refreshes the UI by pulling the latest totals from SharedPreferences
+  // Refreshes the UI by pulling the latest totals from database
   Future<void> _loadHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    await _handleWeeklyReset(prefs); // Perform reset check on startup
+    final dbHelper = DatabaseHelper();
+    await _handleWeeklyReset(); // Perform reset check on startup
 
     if (!mounted) return;
+    Map<String, dynamic> stats = await dbHelper.getUserStats();
     setState(() {
-      totalMetersSaved = prefs.getInt('total_depth') ?? 0;
-      totalCoins = prefs.getInt('total_coins') ?? 0;
-      currentStreak = prefs.getInt('current_streak') ?? 0;
+      totalMetersSaved = stats['total_depth'] ?? 0;
+      totalCoins = stats['total_coins'] ?? 0;
+      currentStreak = stats['current_streak'] ?? 0;
     });
   }
 

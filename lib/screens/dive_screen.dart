@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
 import '../models/treasure.dart';
 import '../widgets/shared_widgets.dart';
+import '../data/database_helper.dart';
 import 'mission_report_screen.dart';
 
 class DiveScreen extends StatefulWidget {
@@ -78,7 +77,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    int testMultiplier = 100000; 
+    int testMultiplier = 5; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
@@ -98,14 +97,14 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     });
   }
 
-  Future<void> _updateStreak(SharedPreferences prefs) async {
+  Future<void> _updateStreak(DatabaseHelper dbHelper, Map<String, dynamic> currentStats) async {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month}-${now.day}";
     final yesterday = now.subtract(const Duration(days: 1));
     final yesterdayStr = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
 
-    String lastDate = prefs.getString('last_dive_date') ?? "";
-    int currentStreak = prefs.getInt('current_streak') ?? 0;
+    String lastDate = currentStats['last_dive_date'] ?? "";
+    int currentStreak = currentStats['current_streak'] ?? 0;
 
     if (lastDate == todayStr) return; 
     
@@ -115,15 +114,17 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       currentStreak = 1; 
     }
 
-    await prefs.setString('last_dive_date', todayStr);
-    await prefs.setInt('current_streak', currentStreak);
+    await dbHelper.updateUserStats({
+      'last_dive_date': todayStr,
+      'current_streak': currentStreak,
+    });
   }
 
   Future<void> stopDive({bool wasforced = false}) async {
     timer?.cancel();
     timer = null;
     final int finalDepth = secondsPassed;
-    final prefs = await SharedPreferences.getInstance();
+    final dbHelper = DatabaseHelper();
     
     Treasure? foundLoot;
     int coinReward = 0;
@@ -131,27 +132,42 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
-      // 1. Log Depths
-      await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
-      // UPDATED: Increment weekly depth for the rank system
-      await prefs.setInt('weekly_depth', (prefs.getInt('weekly_depth') ?? 0) + finalDepth);
+      // Get current stats
+      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
       
-      await _updateStreak(prefs);
+      // 1. Log Depths
+      int newTotalDepth = (currentStats['total_depth'] ?? 0) + finalDepth;
+      int newWeeklyDepth = (currentStats['weekly_depth'] ?? 0) + finalDepth;
+      int newSuccessfulDives = (currentStats['successful_dives'] ?? 0) + 1;
+      
+      await dbHelper.updateUserStats({
+        'total_depth': newTotalDepth,
+        'weekly_depth': newWeeklyDepth,
+        'successful_dives': newSuccessfulDives,
+      });
+      
+      await _updateStreak(dbHelper, currentStats);
 
       foundLoot = Treasure.generate(finalDepth);
-      List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
-      isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == foundLoot!.name);
+      List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
+      isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
       
       if (isDuplicate) { 
         coinReward = foundLoot.rarity.value; 
-        await prefs.setInt('total_coins', (prefs.getInt('total_coins') ?? 0) + coinReward); 
+        int newTotalCoins = (currentStats['total_coins'] ?? 0) + coinReward;
+        await dbHelper.updateUserStats({'total_coins': newTotalCoins});
       } else { 
-        inventory.add(jsonEncode(foundLoot.toMap())); 
-        await prefs.setStringList('treasure_inventory', inventory); 
+        await dbHelper.addTreasure(foundLoot);
       }
     } else if (wasforced) {
-      int currentTotal = prefs.getInt('total_depth') ?? 0;
-      await prefs.setInt('total_depth', (currentTotal - (finalDepth * 2)).clamp(0, 9999999));
+      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
+      int currentTotal = currentStats['total_depth'] ?? 0;
+      int newTotalDepth = (currentTotal - (finalDepth * 2)).clamp(0, 9999999);
+      int newForfeitDives = (currentStats['forfeit_dives'] ?? 0) + 1;
+      await dbHelper.updateUserStats({
+        'total_depth': newTotalDepth,
+        'forfeit_dives': newForfeitDives,
+      });
     }
 
     if (!mounted) return;
