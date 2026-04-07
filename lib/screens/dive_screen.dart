@@ -77,7 +77,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    int testMultiplier = 5; 
+    int testMultiplier = 500; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
@@ -134,6 +134,9 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     if (isSuccessful) {
       // Get current stats
       Map<String, dynamic> currentStats = await dbHelper.getUserStats();
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month}-${now.day}";
+      bool isFirstDiveToday = (currentStats['last_dive_date'] ?? "") != todayStr;
       
       // 1. Log Depths
       int newTotalDepth = (currentStats['total_depth'] ?? 0) + finalDepth;
@@ -148,7 +151,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       
       await _updateStreak(dbHelper, currentStats);
 
-      foundLoot = Treasure.generate(finalDepth);
+      foundLoot = Treasure.generate(finalDepth, guaranteedHighestInBracket: isFirstDiveToday);
       List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
       isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
       

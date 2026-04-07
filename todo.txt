@@ -1,7 +1,6 @@
  TODO:
- - Every 1000 meters change for unlocking Creatures
+ - Every 1000 meters chance for unlocking Creatures
  - Daily lootboxes for successful dives (24 hour timer, once a day)
- - Add weekly ranked system for total meters dived - each rank has emblems and it resets each week, past logbook of ranks + average rank
  - Add images and visuals rather stylized colors and symbols
  - Notifications during dives, notifications when daily streaks are about to expire, and when sunken treasure if availible
- - First dive a day gives you the highest teir item possible in the bracket of depth you end in
+
