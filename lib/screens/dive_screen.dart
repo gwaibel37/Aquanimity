@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
 import '../models/treasure.dart';
+import '../services/notification_service.dart';
 import '../widgets/shared_widgets.dart';
+import '../data/database_helper.dart';
 import 'mission_report_screen.dart';
 
 class DiveScreen extends StatefulWidget {
@@ -52,7 +52,6 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // If the user leaves the app during a dive, they get "the bends" (lose progress)
     if (isDiving && state == AppLifecycleState.paused) _triggerTheBends();
   }
 
@@ -79,37 +78,36 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   void startDive() {
-    // Note: Set testMultiplier to 1 for real-time, or keep it high for testing
-    int testMultiplier = 100; 
+    int testMultiplier = 500; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
         secondsPassed += testMultiplier;
         
-        // Dynamic PDA notifications based on depth
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
+          NotificationService().showNotification(201, "Dive Milestone", "Epic tier reached at $secondsPassed m.");
           reachedMilestones.add(350);
         } else if (secondsPassed >= 600 && !reachedMilestones.contains(600)) {
           _triggerPDA("LEGENDARY SIGNALS DETECTED", Colors.amber);
+          NotificationService().showNotification(202, "Dive Milestone", "Legendary signals detected at $secondsPassed m.");
           reachedMilestones.add(600);
         }
 
-        // Auto-stop if target duration reached
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
     });
   }
 
-  Future<void> _updateStreak(SharedPreferences prefs) async {
+  Future<void> _updateStreak(DatabaseHelper dbHelper, Map<String, dynamic> currentStats) async {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month}-${now.day}";
     final yesterday = now.subtract(const Duration(days: 1));
     final yesterdayStr = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
 
-    String lastDate = prefs.getString('last_dive_date') ?? "";
-    int currentStreak = prefs.getInt('current_streak') ?? 0;
+    String lastDate = currentStats['last_dive_date'] ?? "";
+    int currentStreak = currentStats['current_streak'] ?? 0;
 
     if (lastDate == todayStr) return; 
     
@@ -119,15 +117,17 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       currentStreak = 1; 
     }
 
-    await prefs.setString('last_dive_date', todayStr);
-    await prefs.setInt('current_streak', currentStreak);
+    await dbHelper.updateUserStats({
+      'last_dive_date': todayStr,
+      'current_streak': currentStreak,
+    });
   }
 
   Future<void> stopDive({bool wasforced = false}) async {
     timer?.cancel();
     timer = null;
     final int finalDepth = secondsPassed;
-    final prefs = await SharedPreferences.getInstance();
+    final dbHelper = DatabaseHelper();
     
     Treasure? foundLoot;
     int coinReward = 0;
@@ -135,30 +135,48 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
-      // 1. Log Depth & Update Streak
-      await prefs.setInt('total_depth', (prefs.getInt('total_depth') ?? 0) + finalDepth);
-      await _updateStreak(prefs);
+      // Get current stats
+      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month}-${now.day}";
+      bool isFirstDiveToday = (currentStats['last_dive_date'] ?? "") != todayStr;
+      
+      // 1. Log Depths
+      int newTotalDepth = (currentStats['total_depth'] ?? 0) + finalDepth;
+      int newWeeklyDepth = (currentStats['weekly_depth'] ?? 0) + finalDepth;
+      int newSuccessfulDives = (currentStats['successful_dives'] ?? 0) + 1;
+      
+      await dbHelper.updateUserStats({
+        'total_depth': newTotalDepth,
+        'weekly_depth': newWeeklyDepth,
+        'successful_dives': newSuccessfulDives,
+      });
+      
+      await _updateStreak(dbHelper, currentStats);
+      await NotificationService().cancelStreakReminder();
 
-      // 2. Generate Loot (Now includes description via JSON logic)
-      foundLoot = Treasure.generate(finalDepth);
-      
-      List<String> inventory = prefs.getStringList('treasure_inventory') ?? [];
-      
-      // 3. Check for duplicates based on the Name key in the JSON
-      isDuplicate = inventory.any((itemJson) => jsonDecode(itemJson)['name'] == foundLoot!.name);
+      foundLoot = Treasure.generate(finalDepth, guaranteedHighestInBracket: isFirstDiveToday);
+      List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
+      isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
       
       if (isDuplicate) { 
         coinReward = foundLoot.rarity.value; 
-        await prefs.setInt('total_coins', (prefs.getInt('total_coins') ?? 0) + coinReward); 
+        int newTotalCoins = (currentStats['total_coins'] ?? 0) + coinReward;
+        await dbHelper.updateUserStats({'total_coins': newTotalCoins});
+        NotificationService().showNotification(301, 'Treasure Duplicate', 'Duplicate treasure converted to $coinReward coins.');
       } else { 
-        // 4. Save the full JSON map (including description) to the inventory
-        inventory.add(jsonEncode(foundLoot.toMap())); 
-        await prefs.setStringList('treasure_inventory', inventory); 
+        await dbHelper.addTreasure(foundLoot);
+        NotificationService().showNotification(302, 'Sunken Treasure Found!', 'You recovered ${foundLoot.name} (${foundLoot.rarity.name.toUpperCase()}).');
       }
     } else if (wasforced) {
-      // Penalty for "The Bends"
-      int currentTotal = prefs.getInt('total_depth') ?? 0;
-      await prefs.setInt('total_depth', (currentTotal - (finalDepth * 2)).clamp(0, 9999999));
+      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
+      int currentTotal = currentStats['total_depth'] ?? 0;
+      int newTotalDepth = (currentTotal - (finalDepth * 2)).clamp(0, 9999999);
+      int newForfeitDives = (currentStats['forfeit_dives'] ?? 0) + 1;
+      await dbHelper.updateUserStats({
+        'total_depth': newTotalDepth,
+        'forfeit_dives': newForfeitDives,
+      });
     }
 
     if (!mounted) return;
@@ -179,14 +197,12 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
     return Scaffold(
-      // Gradient darkens as the user dives deeper
       backgroundColor: Color.lerp(const Color.fromARGB(255, 35, 118, 226), Colors.black, (secondsPassed / 3000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [
             PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
             
-            // Visual Submarine descent indicator
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,

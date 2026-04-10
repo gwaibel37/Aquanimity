@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart'; // Added for feedback
 import '../models/treasure.dart';
 import '../widgets/shared_widgets.dart';
+import '../data/database_helper.dart';
 
 enum SortMode { newest, rarity, value }
 
@@ -25,12 +24,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInventory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> savedItems = prefs.getStringList('treasure_inventory') ?? [];
+    final dbHelper = DatabaseHelper();
+    final userStats = await dbHelper.getUserStats();
+    final inventoryItems = await dbHelper.getInventory();
+    
     setState(() {
-      // Correctly parsing the JSON objects from SharedPreferences
-      items = savedItems.map((item) => jsonDecode(item) as Map<String, dynamic>).toList();
-      totalCoins = prefs.getInt('total_coins') ?? 0;
+      items = inventoryItems;
+      totalCoins = userStats['total_coins'] ?? 0;
       _applySort(); 
     });
   }
@@ -67,30 +67,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
-  Future<void> _saveState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('treasure_inventory', items.map((i) => jsonEncode(i)).toList());
-    await prefs.setInt('total_coins', totalCoins);
-  }
-
   void _bulkSell(Rarity rarity) async {
+    final dbHelper = DatabaseHelper();
+    List<Map<String, dynamic>> inventoryItems = await dbHelper.getInventory();
+    
     int count = 0;
     int gain = 0;
+    List<int> indicesToRemove = [];
+    
+    // Find items to remove and calculate gain
+    for (int i = 0; i < inventoryItems.length; i++) {
+      if (inventoryItems[i]['rarity'] == rarity.name) {
+        count++;
+        gain += rarity.value;
+        indicesToRemove.add(i);
+      }
+    }
+    
+    // Remove items from storage (database or SharedPreferences)
+    for (int index in indicesToRemove.reversed) { // Remove in reverse order to maintain indices
+      await dbHelper.removeTreasure(index);
+    }
+    
+    // Update coins
+    if (gain > 0) {
+      Map<String, dynamic> userStats = await dbHelper.getUserStats();
+      int newTotalCoins = (userStats['total_coins'] ?? 0) + gain;
+      await dbHelper.updateUserStats({'total_coins': newTotalCoins});
+    }
+    
+    // Update local state
     setState(() {
-      items.removeWhere((item) {
-        if (item['rarity'] == rarity.name) {
-          count++;
-          gain += rarity.value;
-          return true;
-        }
-        return false;
-      });
+      items.removeWhere((item) => item['rarity'] == rarity.name);
       totalCoins += gain;
     });
 
     if (count > 0) {
       if (await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
-      await _saveState();
       if(!mounted) return; // Safety check before showing SnackBar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

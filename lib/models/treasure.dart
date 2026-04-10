@@ -26,7 +26,7 @@ class Treasure {
     required this.description
   });
 
-  static Treasure generate(int depth) {
+  static Treasure generate(int depth, {bool guaranteedHighestInBracket = false}) {
     final random = math.Random();
     
     // Your depth-based weight logic (kept intact because it's well-balanced!)
@@ -38,6 +38,14 @@ class Treasure {
       Rarity.uncommon: (depth >= 1000) ? 0.0 : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
       Rarity.common: (depth >= 600) ? 0.0 : math.max(5.0, 150.0 - (depth / 5)),
     };
+
+    if (guaranteedHighestInBracket) {
+      for (Rarity rarity in Rarity.values.toList().reversed) {
+        if ((weights[rarity] ?? 0.0) > 0) {
+          return _createTreasureFromPool(rarity);
+        }
+      }
+    }
 
     double totalWeight = weights.values.fold(0.0, (sum, w) => sum + w);
     double roll = random.nextDouble() * totalWeight;
