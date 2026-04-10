@@ -77,7 +77,10 @@ class _MenuScreenState extends State<MenuScreen> {
     "This is my last resort.",
     "I am the one who dives.",
     "I hate sand, it's coarse and rough and irritating and it gets everywhere.",
-    "JERRY! JERRY! JERRY! JERRY!"
+    "JERRY! JERRY! JERRY! JERRY!",
+    "Why don't you get a job?",
+    "Gotta keep em' separated",
+    "Do you have the time?"
   ];
 
   @override
@@ -121,7 +124,7 @@ class _MenuScreenState extends State<MenuScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _helpSection(Icons.waves, 'Welcome to Aquanimity', 'Dive into the depths of the ocean in this underwater adventure game. Your goal is to explore the abyss and collect treasures while managing your oxygen and depth.', Colors.cyanAccent),
+                  _helpSection(Icons.waves, 'Welcome to Aquanimity', 'Dive into the depths of the ocean in this underwater adventure game. Your goal is to explore the abyss and collect treasures while practicing to stay off your devices.', Colors.cyanAccent),
                   const SizedBox(height: 20),
                   _helpSection(Icons.timer, 'Dive Duration', 'Set the duration of your dive in minutes. The longer you dive, the deeper you can go, but be careful - running out of oxygen ends your dive!', Colors.yellowAccent),
                   const SizedBox(height: 20),

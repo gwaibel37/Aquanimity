@@ -147,6 +147,9 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentRank = RankSystem.getRank(weeklyMeters);
+    final RankTier? bestRank = _resolveBestRank(currentRank);
+    final String bestRankLabel = bestRank != null ? "${bestRank.category} ${bestRank.subTier}" : "N/A";
+    final Color bestRankColor = bestRank?.color ?? Colors.indigoAccent;
 
     return Scaffold(
       body: AbyssalBackground(
@@ -166,12 +169,17 @@ class _StatsScreenState extends State<StatsScreen> {
                       Row(
                         children: [
                           Expanded(child: _buildStatCard("TOTAL DEPTH", "$totalDepth m", Colors.cyanAccent)),
-                          Expanded(child: _buildStatCard("SUCCESSFUL", "$success", Colors.greenAccent)),
+                          Expanded(child: _buildStatCard("BEST RANK", bestRankLabel, bestRankColor)),
                         ],
                       ),
                       Row(
                         children: [
+                          Expanded(child: _buildStatCard("SUCCESSFUL", "$success", Colors.greenAccent)),
                           Expanded(child: _buildStatCard("BREACHES", "$forfeit", Colors.redAccent)),
+                        ],
+                      ),
+                      Row(
+                        children: [
                           Expanded(child: _buildStatCard("STREAK", "$currentStreak DAYS", Colors.orangeAccent)),
                         ],
                       ),
@@ -259,6 +267,37 @@ class _StatsScreenState extends State<StatsScreen> {
         ],
       ),
     );
+  }
+
+  RankTier? _rankTierFromLabel(String label) {
+    final normalized = label.trim();
+    for (final rank in RankSystem.levels) {
+      if ("${rank.category} ${rank.subTier}" == normalized) {
+        return rank;
+      }
+    }
+    return null;
+  }
+
+  RankTier? _resolveBestRank(RankTier currentRank) {
+    RankTier? best = weeklyMeters > 0 ? currentRank : null;
+
+    for (final entry in rankHistory) {
+      final parts = entry.split('|').map((part) => part.trim()).toList();
+      if (parts.length < 3) continue;
+
+      final String rankLabel = parts[2];
+      if (rankLabel.toUpperCase() == 'ARCHIVED' || rankLabel.isEmpty) continue;
+
+      final RankTier? historyRank = _rankTierFromLabel(rankLabel);
+      if (historyRank == null) continue;
+
+      if (best == null || RankSystem.levels.indexOf(historyRank) < RankSystem.levels.indexOf(best)) {
+        best = historyRank;
+      }
+    }
+
+    return best;
   }
 
   Widget _buildHistoryList() {
