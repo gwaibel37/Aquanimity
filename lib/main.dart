@@ -6,8 +6,13 @@ import 'screens/inventory_screen.dart';
 import 'screens/stats_screen.dart';
 import 'widgets/shared_widgets.dart';
 import 'data/database_helper.dart';
+import 'services/notification_service.dart';
 
-void main() => runApp(const AquanimityApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
+  runApp(const AquanimityApp());
+}
 
 class AquanimityApp extends StatelessWidget {
   const AquanimityApp({super.key});
@@ -80,7 +85,8 @@ class _MenuScreenState extends State<MenuScreen> {
     "JERRY! JERRY! JERRY! JERRY!",
     "Why don't you get a job?",
     "Gotta keep em' separated",
-    "Do you have the time?"
+    "Do you have the time?",
+    "How dare we speak Merry Christmas",
   ];
 
   @override
@@ -108,6 +114,33 @@ class _MenuScreenState extends State<MenuScreen> {
       currentStreak = stats['current_streak'] ?? 0;
       weeklyDepth = stats['weekly_depth'] ?? 0;
     });
+    await _refreshStreakNotification(stats);
+  }
+
+  Future<void> _refreshStreakNotification(Map<String, dynamic> stats) async {
+    final String lastDiveDate = stats['last_dive_date'] ?? '';
+    final int streak = stats['current_streak'] ?? 0;
+
+    if (streak > 0 && !_didDiveToday(lastDiveDate)) {
+      await NotificationService().scheduleStreakReminder(_nextStreakReminderTime());
+    } else {
+      await NotificationService().cancelStreakReminder();
+    }
+  }
+
+  bool _didDiveToday(String lastDiveDate) {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month}-${now.day}";
+    return lastDiveDate == todayStr;
+  }
+
+  DateTime _nextStreakReminderTime() {
+    final now = DateTime.now();
+    final todayReminder = DateTime(now.year, now.month, now.day, 20, 0);
+    if (now.isBefore(todayReminder)) {
+      return todayReminder;
+    }
+    return now.add(const Duration(minutes: 1));
   }
 
   void _showHelpDialog() {

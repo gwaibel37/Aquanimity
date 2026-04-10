@@ -2,5 +2,4 @@
  - Every 1000 meters chance for unlocking Creatures
  - Daily lootboxes for successful dives (24 hour timer, once a day)
  - Add images and visuals rather stylized colors and symbols
- - Notifications during dives, notifications when daily streaks are about to expire, and when sunken treasure if availible
 

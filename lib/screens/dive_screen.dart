@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
 
 import '../models/treasure.dart';
+import '../services/notification_service.dart';
 import '../widgets/shared_widgets.dart';
 import '../data/database_helper.dart';
 import 'mission_report_screen.dart';
@@ -86,9 +87,11 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
         
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
+          NotificationService().showNotification(201, "Dive Milestone", "Epic tier reached at $secondsPassed m.");
           reachedMilestones.add(350);
         } else if (secondsPassed >= 600 && !reachedMilestones.contains(600)) {
           _triggerPDA("LEGENDARY SIGNALS DETECTED", Colors.amber);
+          NotificationService().showNotification(202, "Dive Milestone", "Legendary signals detected at $secondsPassed m.");
           reachedMilestones.add(600);
         }
 
@@ -150,6 +153,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       });
       
       await _updateStreak(dbHelper, currentStats);
+      await NotificationService().cancelStreakReminder();
 
       foundLoot = Treasure.generate(finalDepth, guaranteedHighestInBracket: isFirstDiveToday);
       List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
@@ -159,8 +163,10 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
         coinReward = foundLoot.rarity.value; 
         int newTotalCoins = (currentStats['total_coins'] ?? 0) + coinReward;
         await dbHelper.updateUserStats({'total_coins': newTotalCoins});
+        NotificationService().showNotification(301, 'Treasure Duplicate', 'Duplicate treasure converted to $coinReward coins.');
       } else { 
         await dbHelper.addTreasure(foundLoot);
+        NotificationService().showNotification(302, 'Sunken Treasure Found!', 'You recovered ${foundLoot.name} (${foundLoot.rarity.name.toUpperCase()}).');
       }
     } else if (wasforced) {
       Map<String, dynamic> currentStats = await dbHelper.getUserStats();
