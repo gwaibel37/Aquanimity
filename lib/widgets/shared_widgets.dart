@@ -47,12 +47,15 @@ class AbyssalBackground extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.topCenter,
           radius: 1.5,
-          colors: [Color(0xFF001D3D), Colors.black],
-          stops: [0.0, 0.8],
+          colors: [
+            Theme.of(context).colorScheme.primary.withAlpha(180),
+            Theme.of(context).colorScheme.background,
+          ],
+          stops: const [0.0, 0.8],
         ),
       ),
       child: child,

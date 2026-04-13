@@ -36,7 +36,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'aquaminity.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -54,7 +54,9 @@ class DatabaseHelper {
         last_weekly_reset TEXT,
         last_dive_date TEXT,
         successful_dives INTEGER DEFAULT 0,
-        forfeit_dives INTEGER DEFAULT 0
+        forfeit_dives INTEGER DEFAULT 0,
+        selected_theme TEXT DEFAULT 'default',
+        selected_boat_style TEXT DEFAULT 'Classic Sub'
       )
     ''');
 
@@ -80,12 +82,42 @@ class DatabaseHelper {
       )
     ''');
 
+    // Purchased upgrades table
+    await db.execute('''
+      CREATE TABLE purchased_upgrades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        upgrade_id INTEGER NOT NULL,
+        upgrade_name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        purchased_date TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
     // Insert default user stats
-    await db.insert('user_stats', {'id': 1});
+    await db.insert('user_stats', {
+      'id': 1,
+      'selected_theme': 'default',
+      'selected_boat_style': 'Classic Sub',
+    });
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database upgrades here if needed
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchased_upgrades (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          upgrade_id INTEGER NOT NULL,
+          upgrade_name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          purchased_date TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE user_stats ADD COLUMN selected_theme TEXT DEFAULT "default"');
+      await db.execute('ALTER TABLE user_stats ADD COLUMN selected_boat_style TEXT DEFAULT "Classic Sub"');
+      await db.execute('UPDATE user_stats SET selected_boat_style = "Classic Sub" WHERE selected_boat_style IS NULL OR selected_boat_style = "default"');
+    }
   }
 
   // Migration method to move data from SharedPreferences to database
@@ -324,5 +356,44 @@ class DatabaseHelper {
     return stats.isEmpty || (stats.first['total_depth'] == 0 &&
                              stats.first['total_coins'] == 0 &&
                              stats.first['current_streak'] == 0);
+  }
+
+  // Upgrade-related methods
+  Future<void> purchaseUpgrade(int upgradeId, String upgradeName, String category) async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      // For web, we'd store this in SharedPreferences if needed
+      // For now, we'll skip it since web isn't the focus
+    } else {
+      final db = await database;
+      await db.insert('purchased_upgrades', {
+        'upgrade_id': upgradeId,
+        'upgrade_name': upgradeName,
+        'category': category,
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchasedUpgrades() async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      return []; // Return empty for web for now
+    }
+    final db = await database;
+    return await db.query('purchased_upgrades');
+  }
+
+  Future<bool> isUpgradePurchased(int upgradeId) async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      return false;
+    }
+    final db = await database;
+    final result = await db.query(
+      'purchased_upgrades',
+      where: 'upgrade_id = ?',
+      whereArgs: [upgradeId],
+    );
+    return result.isNotEmpty;
   }
 }

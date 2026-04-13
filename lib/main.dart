@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'screens/dive_screen.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/stats_screen.dart';
+import 'screens/loot_boxes_screen.dart';
+import 'screens/personalize_screen.dart';
 import 'widgets/shared_widgets.dart';
 import 'data/database_helper.dart';
 import 'services/notification_service.dart';
@@ -14,28 +16,132 @@ Future<void> main() async {
   runApp(const AquanimityApp());
 }
 
-class AquanimityApp extends StatelessWidget {
+class AquanimityApp extends StatefulWidget {
   const AquanimityApp({super.key});
+
+  @override
+  State<AquanimityApp> createState() => _AquanimityAppState();
+}
+
+class _AquanimityAppState extends State<AquanimityApp> {
+  String selectedThemeName = 'default';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final stats = await DatabaseHelper().getUserStats();
+    if (!mounted) return;
+    setState(() {
+      selectedThemeName = stats['selected_theme'] as String? ?? 'default';
+    });
+  }
+
+  void _handleThemeChanged(String themeName) {
+    setState(() {
+      selectedThemeName = themeName;
+    });
+  }
+
+  ThemeData _themeForName(String themeName) {
+    final colors = _themeColorsForName(themeName);
+    final scheme = ColorScheme.dark(
+      background: colors.background,
+      surface: colors.surface,
+      primary: colors.primary,
+      secondary: colors.accent,
+      onPrimary: Colors.black,
+      onSecondary: Colors.black,
+      onSurface: Colors.white,
+      onBackground: Colors.white,
+    );
+    return ThemeData.from(colorScheme: scheme).copyWith(
+      scaffoldBackgroundColor: colors.background,
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 8,
+          backgroundColor: colors.accent,
+          foregroundColor: Colors.black,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: colors.accent),
+      ),
+    );
+  }
+
+  _ThemeColors _themeColorsForName(String themeName) {
+    switch (themeName) {
+      case 'Deep Sea Theme':
+        return _ThemeColors(
+          primary: Colors.tealAccent.shade200,
+          accent: Colors.tealAccent,
+          background: const Color(0xFF001F2F),
+          surface: const Color(0xFF022B3A),
+        );
+      case 'Neon Dreams Theme':
+        return _ThemeColors(
+          primary: Colors.pinkAccent,
+          accent: Colors.cyanAccent,
+          background: const Color(0xFF1B0730),
+          surface: const Color(0xFF2A0E3B),
+        );
+      case 'Coral Reef Theme':
+        return _ThemeColors(
+          primary: Colors.orangeAccent,
+          accent: Colors.deepOrangeAccent,
+          background: const Color(0xFF2F1A0A),
+          surface: const Color(0xFF3B160F),
+        );
+      case 'Bioluminescent Theme':
+        return _ThemeColors(
+          primary: Colors.lightGreenAccent,
+          accent: Colors.greenAccent,
+          background: const Color(0xFF120A23),
+          surface: const Color(0xFF1E102D),
+        );
+      default:
+        return _ThemeColors(
+          primary: Colors.cyanAccent,
+          accent: Colors.cyanAccent,
+          background: const Color(0xFF001D3D),
+          surface: Colors.black,
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 8,
-          ),
-        ),
-      ),
-      home: const MenuScreen(),
+      theme: _themeForName(selectedThemeName),
+      home: MenuScreen(onThemeChanged: _handleThemeChanged),
     );
   }
 }
 
+class _ThemeColors {
+  final Color primary;
+  final Color accent;
+  final Color background;
+  final Color surface;
+
+  const _ThemeColors({
+    required this.primary,
+    required this.accent,
+    required this.background,
+    required this.surface,
+  });
+}
+
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({super.key});
+  final ValueChanged<String> onThemeChanged;
+  const MenuScreen({super.key, required this.onThemeChanged});
+
   @override
   State<MenuScreen> createState() => _MenuScreenState();
 }
@@ -206,8 +312,10 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color aquaLogo = _getRainbowColor(0, Colors.cyanAccent);
-    final Color yellowSplash = _getRainbowColor(1, Colors.yellowAccent);
+    final Color primaryAccent = Theme.of(context).colorScheme.primary;
+    final Color secondaryAccent = Theme.of(context).colorScheme.secondary;
+    final Color aquaLogo = _getRainbowColor(0, primaryAccent);
+    final Color yellowSplash = _getRainbowColor(1, secondaryAccent);
 
     return Scaffold(
       body: Stack(
@@ -229,7 +337,8 @@ class _MenuScreenState extends State<MenuScreen> {
                         ),
                         OneShotFloat(
                           delayMs: 400,
-                          child: Text(splashText, 
+                          child: Text(splashText,
+                            textAlign: TextAlign.center,
                             style: TextStyle(color: yellowSplash, fontWeight: FontWeight.bold, fontSize: 16, shadows: const [Shadow(blurRadius: 10, color: Colors.black)])),
                         ),
                         const SizedBox(height: 40),
@@ -293,15 +402,25 @@ class _MenuScreenState extends State<MenuScreen> {
                           await Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
                           if (mounted) _loadHistory(); 
                         }, 8),
+                        _menuButton("LOOT BOXES", Colors.orangeAccent, () async {
+                          await Navigator.push(context, MaterialPageRoute(builder: (context) => LootBoxesScreen(
+                            totalCoins: totalCoins,
+                            onCoinsChanged: _loadHistory,
+                          )));
+                          if (mounted) _loadHistory(); 
+                        }, 9),
+                        _menuButton("PERSONALIZE", Colors.pinkAccent[200]!, () async {
+                          await Navigator.push(context, MaterialPageRoute(builder: (context) => PersonalizeScreen(onThemeChanged: widget.onThemeChanged)));
+                        }, 10),
                         _menuButton("DEPTH STATS", Colors.blueGrey[800]!, () async {
                           await Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen()));
                           if (mounted) _loadHistory(); 
-                        }, 9),
+                        }, 11),
 
                         if (weeklyDepth >= 30000)
                           _menuButton("GAY MODE", Colors.pinkAccent, () {
                             setState(() => _gayMode = !_gayMode);
-                          }, 10),
+                          }, 12),
                       ],
                     ),
                   ),

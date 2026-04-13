@@ -22,6 +22,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   bool isDiving = false;
   Timer? timer;
   String statusMessage = "Pressure Seals: Nominal";
+  String selectedBoatStyle = 'default';
   
   late AnimationController _radarController;
   late AnimationController _subFloatController;
@@ -38,6 +39,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     WidgetsBinding.instance.addObserver(this);
     _radarController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
     _subFloatController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
+    _loadSelectedBoatStyle();
   }
 
   @override
@@ -77,8 +79,361 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     pdaDismissTimer = Timer(const Duration(seconds: 5), () { if (mounted) setState(() => showPDA = false); });
   }
 
+  Future<void> _loadSelectedBoatStyle() async {
+    final dbHelper = DatabaseHelper();
+    final stats = await dbHelper.getUserStats();
+    if (!mounted) return;
+    setState(() {
+      selectedBoatStyle = stats['selected_boat_style'] as String? ?? 'Classic Sub';
+      if (selectedBoatStyle == 'default') selectedBoatStyle = 'Classic Sub';
+    });
+  }
+
+  Widget _buildBoatWidget(String style, bool isDiving) {
+    final boatColor = _boatColor(style);
+    switch (style) {
+      case 'Sleek Racer':
+        return _buildSleekRacer(boatColor);
+      case 'Armored Beast':
+        return _buildArmoredBeast(boatColor);
+      case 'Mythical Leviathan':
+        return _buildLeviathan(boatColor);
+      default:
+        return _buildClassicSub(boatColor);
+    }
+  }
+
+  Color _boatColor(String style) {
+    switch (style) {
+      case 'Sleek Racer':
+        return Colors.lightBlueAccent;
+      case 'Armored Beast':
+        return Colors.amberAccent.shade200;
+      case 'Mythical Leviathan':
+        return Colors.purpleAccent.shade200;
+      default:
+        return Colors.cyanAccent;
+    }
+  }
+
+  Widget _buildClassicSub(Color color) {
+    return SizedBox(
+      width: 100,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 0,
+            child: Container(
+              width: 90,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 4)],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            child: Container(
+              width: 56,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 22,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 8),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 24,
+            right: 14,
+            child: Container(
+              width: 20,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleekRacer(Color color) {
+    return SizedBox(
+      width: 140,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 140,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Colors.blueGrey[900],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: color.withAlpha(110), blurRadius: 18, spreadRadius: 3)],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 124,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            left: 14,
+            child: Transform.rotate(
+              angle: -0.15,
+              child: Container(
+                width: 20,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(220),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 14,
+            child: Container(
+              width: 28,
+              height: 18,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 22,
+            child: Container(
+              width: 54,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArmoredBeast(Color color) {
+    return SizedBox(
+      width: 150,
+      height: 78,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 6,
+            child: Container(
+              width: 136,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.grey[850],
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 3)],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 118,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            bottom: 18,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.grey[700],
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 18,
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withAlpha(180), width: 2),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 22,
+            child: Container(
+              width: 100,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 42,
+            bottom: 12,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 6),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeviathan(Color color) {
+    return SizedBox(
+      width: 160,
+      height: 86,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 140,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[900],
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [BoxShadow(color: color.withAlpha(100), blurRadius: 20, spreadRadius: 3)],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 14,
+            child: Container(
+              width: 120,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]),
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 8,
+            child: Transform.rotate(
+              angle: 0.4,
+              child: Container(
+                width: 30,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(220),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _boatEye(),
+                const SizedBox(width: 18),
+                _boatEye(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _boatEye() {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: Colors.white.withAlpha(120), blurRadius: 6, spreadRadius: 1)],
+      ),
+      child: Center(
+        child: Container(
+          width: 4,
+          height: 4,
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _boatPorthole(Color color) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: Colors.white24,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white54, width: 1.5),
+      ),
+    );
+  }
+
   void startDive() {
-    int testMultiplier = 500; 
+    int testMultiplier = 100000000; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
@@ -197,7 +552,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
     return Scaffold(
-      backgroundColor: Color.lerp(const Color.fromARGB(255, 35, 118, 226), Colors.black, (secondsPassed / 3000).clamp(0, 1)),
+      backgroundColor: Color.lerp(Theme.of(context).colorScheme.primary.withAlpha(180), Theme.of(context).colorScheme.background, (secondsPassed / 3000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [
@@ -208,7 +563,9 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
               curve: Curves.easeInOutCubic,
               top: isDiving ? screenHeight : screenHeight * 0.15,
               left: 0, right: 0,
-              child: Icon(Icons.directions_boat, color: Colors.cyanAccent.withAlpha(isDiving ? 50 : 255), size: 60),
+              child: Center(
+                child: _buildBoatWidget(selectedBoatStyle, isDiving),
+              ),
             ),
 
             Positioned(
