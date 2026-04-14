@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 class PDANotification extends StatelessWidget {
@@ -40,7 +41,8 @@ class PDANotification extends StatelessWidget {
 
 class AbyssalBackground extends StatelessWidget {
   final Widget child;
-  const AbyssalBackground({super.key, required this.child});
+  final String? backgroundImagePath;
+  const AbyssalBackground({super.key, required this.child, this.backgroundImagePath});
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +50,24 @@ class AbyssalBackground extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 1.5,
-          colors: [
-            Theme.of(context).colorScheme.primary.withAlpha(180),
-            Theme.of(context).colorScheme.background,
-          ],
-          stops: const [0.0, 0.8],
-        ),
+        image: backgroundImagePath != null && File(backgroundImagePath!).existsSync()
+            ? DecorationImage(
+                image: FileImage(File(backgroundImagePath!)),
+                fit: BoxFit.cover,
+                opacity: 0.7, // Make the image slightly transparent so text is readable
+              )
+            : null,
+        gradient: (backgroundImagePath == null || !File(backgroundImagePath!).existsSync())
+            ? RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.5,
+                colors: [
+                  Theme.of(context).colorScheme.primary.withAlpha(180),
+                  Theme.of(context).colorScheme.surface,
+                ],
+                stops: const [0.0, 0.8],
+              )
+            : null,
       ),
       child: child,
     );

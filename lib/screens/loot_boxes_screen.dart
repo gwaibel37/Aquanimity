@@ -87,7 +87,9 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       });
     }
 
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
     await openingDialog;
     await _showRewardDialog(reward, rarity);
   }

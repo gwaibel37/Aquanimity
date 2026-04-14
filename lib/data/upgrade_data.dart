@@ -32,6 +32,13 @@ class UpgradeData {
       'category': UpgradeCategory.theme,
       'minRarity': LootBoxRarity.legendary,
     },
+    {
+      'id': 9,
+      'name': 'Custom Theme',
+      'description': 'Upload your own image to create a custom theme',
+      'category': UpgradeCategory.theme,
+      'minRarity': LootBoxRarity.legendary,
+    },
 
     // Boat Styles
     {

@@ -36,7 +36,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'aquaminity.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -56,7 +56,12 @@ class DatabaseHelper {
         successful_dives INTEGER DEFAULT 0,
         forfeit_dives INTEGER DEFAULT 0,
         selected_theme TEXT DEFAULT 'default',
-        selected_boat_style TEXT DEFAULT 'Classic Sub'
+        selected_boat_style TEXT DEFAULT 'Classic Sub',
+        custom_theme_primary INTEGER,
+        custom_theme_accent INTEGER,
+        custom_theme_background INTEGER,
+        custom_theme_surface INTEGER,
+        custom_background_image TEXT
       )
     ''');
 
@@ -117,6 +122,23 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE user_stats ADD COLUMN selected_theme TEXT DEFAULT "default"');
       await db.execute('ALTER TABLE user_stats ADD COLUMN selected_boat_style TEXT DEFAULT "Classic Sub"');
       await db.execute('UPDATE user_stats SET selected_boat_style = "Classic Sub" WHERE selected_boat_style IS NULL OR selected_boat_style = "default"');
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE user_stats ADD COLUMN custom_theme_primary INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE user_stats ADD COLUMN custom_theme_accent INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE user_stats ADD COLUMN custom_theme_background INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE user_stats ADD COLUMN custom_theme_surface INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE user_stats ADD COLUMN custom_background_image TEXT');
+      } catch (_) {}
     }
   }
 

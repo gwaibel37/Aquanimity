@@ -25,6 +25,8 @@ class AquanimityApp extends StatefulWidget {
 
 class _AquanimityAppState extends State<AquanimityApp> {
   String selectedThemeName = 'default';
+  _ThemeColors? customThemeColors;
+  String? customBackgroundImagePath;
 
   @override
   void initState() {
@@ -37,26 +39,54 @@ class _AquanimityAppState extends State<AquanimityApp> {
     if (!mounted) return;
     setState(() {
       selectedThemeName = stats['selected_theme'] as String? ?? 'default';
+      customThemeColors = selectedThemeName == 'Custom Theme'
+          ? _loadCustomThemeColors(stats)
+          : null;
+      customBackgroundImagePath = selectedThemeName == 'Custom Theme'
+          ? stats['custom_background_image'] as String?
+          : null;
     });
   }
 
-  void _handleThemeChanged(String themeName) {
+  _ThemeColors? _loadCustomThemeColors(Map<String, dynamic> stats) {
+    final primary = stats['custom_theme_primary'] as int?;
+    final accent = stats['custom_theme_accent'] as int?;
+    final background = stats['custom_theme_background'] as int?;
+    final surface = stats['custom_theme_surface'] as int?;
+
+    if (primary != null && accent != null && background != null && surface != null) {
+      return _ThemeColors(
+        primary: Color(primary),
+        accent: Color(accent),
+        background: Color(background),
+        surface: Color(surface),
+      );
+    }
+    return null;
+  }
+
+  void _handleThemeChanged(String themeName) async {
+    final stats = await DatabaseHelper().getUserStats();
     setState(() {
       selectedThemeName = themeName;
+      customThemeColors = themeName == 'Custom Theme'
+          ? _loadCustomThemeColors(stats)
+          : null;
+      customBackgroundImagePath = themeName == 'Custom Theme'
+          ? stats['custom_background_image'] as String?
+          : null;
     });
   }
 
   ThemeData _themeForName(String themeName) {
     final colors = _themeColorsForName(themeName);
     final scheme = ColorScheme.dark(
-      background: colors.background,
       surface: colors.surface,
       primary: colors.primary,
       secondary: colors.accent,
       onPrimary: Colors.black,
       onSecondary: Colors.black,
       onSurface: Colors.white,
-      onBackground: Colors.white,
     );
     return ThemeData.from(colorScheme: scheme).copyWith(
       scaffoldBackgroundColor: colors.background,
@@ -78,10 +108,10 @@ class _AquanimityAppState extends State<AquanimityApp> {
     switch (themeName) {
       case 'Deep Sea Theme':
         return _ThemeColors(
-          primary: Colors.tealAccent.shade200,
-          accent: Colors.tealAccent,
-          background: const Color(0xFF001F2F),
-          surface: const Color(0xFF022B3A),
+          primary: const Color.fromARGB(255, 2, 152, 252),
+          accent: const Color.fromARGB(255, 230, 255, 2),
+          background: const Color.fromARGB(255, 0, 15, 22),
+          surface: const Color.fromARGB(255, 0, 13, 17),
         );
       case 'Neon Dreams Theme':
         return _ThemeColors(
@@ -92,8 +122,8 @@ class _AquanimityAppState extends State<AquanimityApp> {
         );
       case 'Coral Reef Theme':
         return _ThemeColors(
-          primary: Colors.orangeAccent,
-          accent: Colors.deepOrangeAccent,
+          primary: const Color.fromARGB(255, 4, 255, 180),
+          accent: const Color.fromARGB(255, 151, 250, 23),
           background: const Color(0xFF2F1A0A),
           surface: const Color(0xFF3B160F),
         );
@@ -103,6 +133,13 @@ class _AquanimityAppState extends State<AquanimityApp> {
           accent: Colors.greenAccent,
           background: const Color(0xFF120A23),
           surface: const Color(0xFF1E102D),
+        );
+      case 'Custom Theme':
+        return customThemeColors ?? _ThemeColors(
+          primary: Colors.cyanAccent,
+          accent: Colors.cyanAccent,
+          background: const Color(0xFF001D3D),
+          surface: Colors.black,
         );
       default:
         return _ThemeColors(
@@ -119,7 +156,10 @@ class _AquanimityAppState extends State<AquanimityApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: _themeForName(selectedThemeName),
-      home: MenuScreen(onThemeChanged: _handleThemeChanged),
+      home: MenuScreen(
+        onThemeChanged: _handleThemeChanged,
+        backgroundImagePath: customBackgroundImagePath,
+      ),
     );
   }
 }
@@ -140,7 +180,8 @@ class _ThemeColors {
 
 class MenuScreen extends StatefulWidget {
   final ValueChanged<String> onThemeChanged;
-  const MenuScreen({super.key, required this.onThemeChanged});
+  final String? backgroundImagePath;
+  const MenuScreen({super.key, required this.onThemeChanged, this.backgroundImagePath});
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -321,6 +362,7 @@ class _MenuScreenState extends State<MenuScreen> {
       body: Stack(
         children: [
           AbyssalBackground(
+            backgroundImagePath: widget.backgroundImagePath,
             child: SafeArea(
               child: Center(
                 child: ConstrainedBox(
@@ -442,14 +484,15 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Widget _menuButton(String text, Color color, VoidCallback pressed, int index) {
+    final buttonColor = _gayMode ? _rainbowColors[index % _rainbowColors.length] : color;
     return Padding(
       padding: const EdgeInsets.only(bottom: 20, left: 30, right: 30),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _gayMode ? _rainbowColors[index % _rainbowColors.length] : color, 
-            foregroundColor: Colors.white, 
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: buttonColor),
+            foregroundColor: buttonColor,
             padding: const EdgeInsets.symmetric(vertical: 22),
           ),
           onPressed: pressed,

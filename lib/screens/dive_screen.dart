@@ -90,6 +90,51 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   }
 
   Widget _buildBoatWidget(String style, bool isDiving) {
+    String imagePath;
+    switch (style) {
+      case 'Sleek Racer':
+        imagePath = 'assets/boats/sleek_racer.png';
+        break;
+      case 'Armored Beast':
+        imagePath = 'assets/boats/armored_beast.png';
+        break;
+      case 'Mythical Leviathan':
+        imagePath = 'assets/boats/mythical_leviathan.png';
+        break;
+      default:
+        imagePath = 'assets/boats/classic_sub.png';
+    }
+
+    Widget boatImage = SizedBox(
+      width: 150,
+      height: 100,
+      child: Image.asset(
+        imagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback to the original styled widget if image fails to load
+          return _buildFallbackBoat(style);
+        },
+      ),
+    );
+
+    // Add floating animation when not diving
+    if (!isDiving) {
+      return AnimatedBuilder(
+        animation: _subFloatController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _subFloatController.value * 8 - 4), // Moves -4 to +4 pixels
+            child: boatImage,
+          );
+        },
+      );
+    }
+
+    return boatImage;
+  }
+
+  Widget _buildFallbackBoat(String style) {
     final boatColor = _boatColor(style);
     switch (style) {
       case 'Sleek Racer':
@@ -102,6 +147,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
         return _buildClassicSub(boatColor);
     }
   }
+
 
   Color _boatColor(String style) {
     switch (style) {
@@ -163,7 +209,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
               width: 20,
               height: 10,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.14),
+                color: Colors.white.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
@@ -552,7 +598,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
     return Scaffold(
-      backgroundColor: Color.lerp(Theme.of(context).colorScheme.primary.withAlpha(180), Theme.of(context).colorScheme.background, (secondsPassed / 3000).clamp(0, 1)),
+      backgroundColor: Color.lerp(Theme.of(context).colorScheme.primary.withAlpha(180), Theme.of(context).colorScheme.surface, (secondsPassed / 3000).clamp(0, 1)),
       body: SafeArea(
         child: Stack(
           children: [

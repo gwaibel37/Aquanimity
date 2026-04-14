@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import '../models/loot_box.dart';
 import '../data/database_helper.dart';
 import '../data/upgrade_data.dart';
@@ -45,6 +49,137 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
         return Colors.blueAccent;
       case LootBoxRarity.legendary:
         return Colors.amber;
+    }
+  }
+
+  Future<void> _pickCustomThemeImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      if (!mounted) return;
+      
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          backgroundColor: Colors.blueGrey,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.cyanAccent),
+              SizedBox(height: 16),
+              Text(
+                'Extracting colors from image...',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      try {
+        // Load and decode the image
+        final imageBytes = await File(image.path).readAsBytes();
+        final decodedImage = img.decodeImage(imageBytes);
+
+        if (decodedImage == null) {
+          throw Exception('Failed to decode image');
+        }
+
+        // Simple color extraction - get average color and some sample colors
+        int totalR = 0, totalG = 0, totalB = 0;
+        int pixelCount = 0;
+
+        // Sample pixels from the image
+        for (int y = 0; y < decodedImage.height; y += 10) {
+          for (int x = 0; x < decodedImage.width; x += 10) {
+            final pixel = decodedImage.getPixel(x, y);
+            totalR += pixel.r.toInt();
+            totalG += pixel.g.toInt();
+            totalB += pixel.b.toInt();
+            pixelCount++;
+          }
+        }
+
+        if (pixelCount == 0) {
+          throw Exception('No pixels found in image');
+        }
+
+        // Calculate average color
+        final avgR = (totalR / pixelCount).round();
+        final avgG = (totalG / pixelCount).round();
+        final avgB = (totalB / pixelCount).round();
+        final averageColor = Color.fromARGB(255, avgR, avgG, avgB);
+
+        // Create theme colors based on the average
+        Color primary = averageColor;
+        Color accent = Color.fromARGB(
+          255,
+          (avgR + 100) % 255,
+          (avgG + 50) % 255,
+          (avgB + 150) % 255,
+        );
+        Color background = Color.fromARGB(
+          255,
+          (avgR * 0.3).round(),
+          (avgG * 0.3).round(),
+          (avgB * 0.3).round(),
+        );
+        Color surface = Color.fromARGB(
+          255,
+          (avgR * 0.5).round(),
+          (avgG * 0.5).round(),
+          (avgB * 0.5).round(),
+        );
+
+        // Save the image to app storage using a fresh filename so Flutter reloads it
+        final Directory appDir = await getApplicationDocumentsDirectory();
+        final String imagePath = '${appDir.path}/custom_theme_background_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await File(image.path).copy(imagePath);
+
+        // Save custom theme colors and image path to database
+        await _dbHelper.updateUserStats({
+          'custom_theme_primary': primary.toARGB32(),
+          'custom_theme_accent': accent.toARGB32(),
+          'custom_theme_background': background.toARGB32(),
+          'custom_theme_surface': surface.toARGB32(),
+          'custom_background_image': imagePath,
+        });
+
+        // Update selected theme if not already set to Custom Theme
+        if (selectedTheme != 'Custom Theme') {
+          setState(() {
+            selectedTheme = 'Custom Theme';
+          });
+          await _dbHelper.updateUserStats({'selected_theme': 'Custom Theme'});
+          widget.onThemeChanged('Custom Theme');
+        } else {
+          // Force theme refresh
+          widget.onThemeChanged('Custom Theme');
+        }
+
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Custom theme applied!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to process image: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -210,11 +345,27 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (isSelected)
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.cyanAccent,
-                          size: 32,
-                        )
+                        upgrade.name == 'Custom Theme'
+                            ? ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: color,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                                icon: const Icon(Icons.image, size: 16),
+                                label: const Text(
+                                  'Upload Image',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                onPressed: () => _pickCustomThemeImage(),
+                              )
+                            : const Icon(
+                                Icons.check_circle,
+                                color: Colors.cyanAccent,
+                                size: 32,
+                              )
                       else
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
