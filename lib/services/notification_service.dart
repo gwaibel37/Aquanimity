@@ -68,6 +68,7 @@ class NotificationService {
       color: color,
       playSound: true,
       ticker: 'Aquanimity',
+      icon: '@drawable/ic_notification',
     );
 
     final iosDetails = DarwinNotificationDetails(

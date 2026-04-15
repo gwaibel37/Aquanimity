@@ -106,7 +106,7 @@ class TreasureData {
       "Michael's Group's Project": "Raycasted Pong... How unoriginal! It was clearly a 'C-' effort.",
       "Uninflated Tire": "A rubber donut that has seen better days. It doesn't even have the rim.",
       "Cracked Sunglasses": "Cool once, but now they're just missing a lens and covered in silt.",
-      "A Single Sock": "Where is the other one? The ocean is the ultimate 'missing sock' dimension.",
+      "A Single Sock": "Where is the other one?",
     },
   };
 }
