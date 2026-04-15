@@ -62,7 +62,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text("⚠️ HULL BREACH: EMERGENCY ASCENT DETECTED!", style: TextStyle(fontWeight: FontWeight.bold))
+          content: Text("⚠️ HULL BREACH: EMERGENCY ASCENT DETECTED!", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))
         )
       );
     }
@@ -92,17 +92,10 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
   Widget _buildBoatWidget(String style, bool isDiving) {
     String imagePath;
     switch (style) {
-      case 'Sleek Racer':
-        imagePath = 'assets/boats/sleek_racer.png';
-        break;
-      case 'Armored Beast':
-        imagePath = 'assets/boats/armored_beast.png';
-        break;
-      case 'Mythical Leviathan':
-        imagePath = 'assets/boats/mythical_leviathan.png';
-        break;
-      default:
-        imagePath = 'assets/boats/classic_sub.png';
+      case 'Sleek Racer': imagePath = 'assets/boats/sleek_racer.png'; break;
+      case 'Armored Beast': imagePath = 'assets/boats/armored_beast.png'; break;
+      case 'Mythical Leviathan': imagePath = 'assets/boats/mythical_leviathan.png'; break;
+      default: imagePath = 'assets/boats/classic_sub.png';
     }
 
     Widget boatImage = SizedBox(
@@ -111,381 +104,92 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       child: Image.asset(
         imagePath,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          // Fallback to the original styled widget if image fails to load
-          return _buildFallbackBoat(style);
-        },
+        errorBuilder: (context, error, stackTrace) => _buildFallbackBoat(style),
       ),
     );
 
-    // Add floating animation when not diving
     if (!isDiving) {
       return AnimatedBuilder(
         animation: _subFloatController,
         builder: (context, child) {
           return Transform.translate(
-            offset: Offset(0, _subFloatController.value * 8 - 4), // Moves -4 to +4 pixels
+            offset: Offset(0, _subFloatController.value * 8 - 4),
             child: boatImage,
           );
         },
       );
     }
-
     return boatImage;
   }
 
   Widget _buildFallbackBoat(String style) {
     final boatColor = _boatColor(style);
     switch (style) {
-      case 'Sleek Racer':
-        return _buildSleekRacer(boatColor);
-      case 'Armored Beast':
-        return _buildArmoredBeast(boatColor);
-      case 'Mythical Leviathan':
-        return _buildLeviathan(boatColor);
-      default:
-        return _buildClassicSub(boatColor);
+      case 'Sleek Racer': return _buildSleekRacer(boatColor);
+      case 'Armored Beast': return _buildArmoredBeast(boatColor);
+      case 'Mythical Leviathan': return _buildLeviathan(boatColor);
+      default: return _buildClassicSub(boatColor);
     }
   }
 
-
   Color _boatColor(String style) {
     switch (style) {
-      case 'Sleek Racer':
-        return Colors.lightBlueAccent;
-      case 'Armored Beast':
-        return Colors.amberAccent.shade200;
-      case 'Mythical Leviathan':
-        return Colors.purpleAccent.shade200;
-      default:
-        return Colors.cyanAccent;
+      case 'Sleek Racer': return Colors.lightBlueAccent;
+      case 'Armored Beast': return Colors.amberAccent.shade200;
+      case 'Mythical Leviathan': return Colors.purpleAccent.shade200;
+      default: return Colors.cyanAccent;
     }
   }
 
   Widget _buildClassicSub(Color color) {
-    return SizedBox(
-      width: 100,
-      height: 72,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            bottom: 0,
-            child: Container(
-              width: 90,
-              height: 26,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 4)],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            child: Container(
-              width: 56,
-              height: 28,
-              decoration: BoxDecoration(
-                color: color.withAlpha(220),
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 22,
-            child: Row(
-              children: [
-                _boatPorthole(color),
-                const SizedBox(width: 8),
-                _boatPorthole(color),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 24,
-            right: 14,
-            child: Container(
-              width: 20,
-              height: 10,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return SizedBox(width: 100, height: 72, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 0, child: Container(width: 90, height: 26, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 4)]))),
+      Positioned(top: 8, child: Container(width: 56, height: 28, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(14)))),
+      Positioned(left: 22, child: Row(children: [_boatPorthole(color), const SizedBox(width: 8), _boatPorthole(color)])),
+      Positioned(top: 24, right: 14, child: Container(width: 20, height: 10, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(6)))),
+    ]));
   }
 
   Widget _buildSleekRacer(Color color) {
-    return SizedBox(
-      width: 140,
-      height: 72,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            bottom: 8,
-            child: Container(
-              width: 140,
-              height: 30,
-              decoration: BoxDecoration(
-                color: Colors.blueGrey[900],
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: color.withAlpha(110), blurRadius: 18, spreadRadius: 3)],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 12,
-            child: Container(
-              width: 124,
-              height: 24,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]),
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 12,
-            left: 14,
-            child: Transform.rotate(
-              angle: -0.15,
-              child: Container(
-                width: 20,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(220),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 14,
-            child: Container(
-              width: 28,
-              height: 18,
-              decoration: BoxDecoration(
-                color: color.withAlpha(220),
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 22,
-            child: Container(
-              width: 54,
-              height: 10,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return SizedBox(width: 140, height: 72, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 8, child: Container(width: 140, height: 30, decoration: BoxDecoration(color: Colors.blueGrey[900], borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: color.withAlpha(110), blurRadius: 18, spreadRadius: 3)]))),
+      Positioned(bottom: 12, child: Container(width: 124, height: 24, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]), borderRadius: BorderRadius.circular(16)))),
+      Positioned(top: 12, left: 14, child: Transform.rotate(angle: -0.15, child: Container(width: 20, height: 26, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(10))))),
+      Positioned(right: 14, child: Container(width: 28, height: 18, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(10)))),
+      Positioned(top: 22, child: Container(width: 54, height: 10, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)))),
+    ]));
   }
 
   Widget _buildArmoredBeast(Color color) {
-    return SizedBox(
-      width: 150,
-      height: 78,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            bottom: 6,
-            child: Container(
-              width: 136,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.grey[850],
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 3)],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 10,
-            child: Container(
-              width: 118,
-              height: 26,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            bottom: 18,
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: Colors.grey[700],
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 18,
-            top: 18,
-            child: Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withAlpha(180), width: 2),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 22,
-            child: Container(
-              width: 100,
-              height: 14,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 42,
-            bottom: 12,
-            child: Row(
-              children: [
-                _boatPorthole(color),
-                const SizedBox(width: 6),
-                _boatPorthole(color),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return SizedBox(width: 150, height: 78, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 6, child: Container(width: 136, height: 32, decoration: BoxDecoration(color: Colors.grey[850], borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 3)]))),
+      Positioned(bottom: 10, child: Container(width: 118, height: 26, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)))),
+      Positioned(left: 16, bottom: 18, child: Container(width: 18, height: 18, decoration: BoxDecoration(color: Colors.grey[700], borderRadius: BorderRadius.circular(6)))),
+      Positioned(right: 18, top: 18, child: Container(width: 26, height: 26, decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withAlpha(180), width: 2)))),
+      Positioned(top: 22, child: Container(width: 100, height: 14, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)))),
+      Positioned(left: 42, bottom: 12, child: Row(children: [_boatPorthole(color), const SizedBox(width: 6), _boatPorthole(color)])),
+    ]));
   }
 
   Widget _buildLeviathan(Color color) {
-    return SizedBox(
-      width: 160,
-      height: 86,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            bottom: 10,
-            child: Container(
-              width: 140,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.deepPurple[900],
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: color.withAlpha(100), blurRadius: 20, spreadRadius: 3)],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 14,
-            child: Container(
-              width: 120,
-              height: 24,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]),
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 12,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: color.withAlpha(220),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            right: 8,
-            child: Transform.rotate(
-              angle: 0.4,
-              child: Container(
-                width: 30,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(220),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 12,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _boatEye(),
-                const SizedBox(width: 18),
-                _boatEye(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return SizedBox(width: 160, height: 86, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 10, child: Container(width: 140, height: 28, decoration: BoxDecoration(color: Colors.deepPurple[900], borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: color.withAlpha(100), blurRadius: 20, spreadRadius: 3)]))),
+      Positioned(bottom: 14, child: Container(width: 120, height: 24, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]), borderRadius: BorderRadius.circular(28)))),
+      Positioned(left: 12, child: Container(width: 22, height: 22, decoration: BoxDecoration(color: color.withAlpha(220), shape: BoxShape.circle))),
+      Positioned(right: 8, child: Transform.rotate(angle: 0.4, child: Container(width: 30, height: 16, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(12))))),
+      Positioned(top: 12, child: Row(mainAxisSize: MainAxisSize.min, children: [_boatEye(), const SizedBox(width: 18), _boatEye()])),
+    ]));
   }
 
-  Widget _boatEye() {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: Colors.white.withAlpha(120), blurRadius: 6, spreadRadius: 1)],
-      ),
-      child: Center(
-        child: Container(
-          width: 4,
-          height: 4,
-          decoration: const BoxDecoration(
-            color: Colors.black,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _boatPorthole(Color color) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: Colors.white24,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white54, width: 1.5),
-      ),
-    );
-  }
+  Widget _boatEye() => Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.white.withAlpha(120), blurRadius: 6, spreadRadius: 1)]), child: Center(child: Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle))));
+  Widget _boatPorthole(Color color) => Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle, border: Border.all(color: Colors.white54, width: 1.5)));
 
   void startDive() {
-    int testMultiplier = 100000000; 
     setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
-        secondsPassed += testMultiplier;
-        
+        secondsPassed += 1000000000; // Change Speed here
         if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
           _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
           NotificationService().showNotification(201, "Dive Milestone", "Epic tier reached at $secondsPassed m.");
@@ -495,32 +199,8 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
           NotificationService().showNotification(202, "Dive Milestone", "Legendary signals detected at $secondsPassed m.");
           reachedMilestones.add(600);
         }
-
         if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
       });
-    });
-  }
-
-  Future<void> _updateStreak(DatabaseHelper dbHelper, Map<String, dynamic> currentStats) async {
-    final now = DateTime.now();
-    final todayStr = "${now.year}-${now.month}-${now.day}";
-    final yesterday = now.subtract(const Duration(days: 1));
-    final yesterdayStr = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
-
-    String lastDate = currentStats['last_dive_date'] ?? "";
-    int currentStreak = currentStats['current_streak'] ?? 0;
-
-    if (lastDate == todayStr) return; 
-    
-    if (lastDate == yesterdayStr || lastDate == "") {
-      currentStreak++; 
-    } else {
-      currentStreak = 1; 
-    }
-
-    await dbHelper.updateUserStats({
-      'last_dive_date': todayStr,
-      'current_streak': currentStreak,
     });
   }
 
@@ -536,48 +216,26 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
-      // Get current stats
       Map<String, dynamic> currentStats = await dbHelper.getUserStats();
-      final now = DateTime.now();
-      final todayStr = "${now.year}-${now.month}-${now.day}";
+      final todayStr = "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}";
       bool isFirstDiveToday = (currentStats['last_dive_date'] ?? "") != todayStr;
       
-      // 1. Log Depths
-      int newTotalDepth = (currentStats['total_depth'] ?? 0) + finalDepth;
-      int newWeeklyDepth = (currentStats['weekly_depth'] ?? 0) + finalDepth;
-      int newSuccessfulDives = (currentStats['successful_dives'] ?? 0) + 1;
-      
       await dbHelper.updateUserStats({
-        'total_depth': newTotalDepth,
-        'weekly_depth': newWeeklyDepth,
-        'successful_dives': newSuccessfulDives,
+        'total_depth': (currentStats['total_depth'] ?? 0) + finalDepth,
+        'weekly_depth': (currentStats['weekly_depth'] ?? 0) + finalDepth,
+        'successful_dives': (currentStats['successful_dives'] ?? 0) + 1,
       });
       
-      await _updateStreak(dbHelper, currentStats);
-      await NotificationService().cancelStreakReminder();
-
       foundLoot = Treasure.generate(finalDepth, guaranteedHighestInBracket: isFirstDiveToday);
       List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
       isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
       
       if (isDuplicate) { 
         coinReward = foundLoot.rarity.value; 
-        int newTotalCoins = (currentStats['total_coins'] ?? 0) + coinReward;
-        await dbHelper.updateUserStats({'total_coins': newTotalCoins});
-        NotificationService().showNotification(301, 'Treasure Duplicate', 'Duplicate treasure converted to $coinReward coins.');
+        await dbHelper.updateUserStats({'total_coins': (currentStats['total_coins'] ?? 0) + coinReward});
       } else { 
         await dbHelper.addTreasure(foundLoot);
-        NotificationService().showNotification(302, 'Sunken Treasure Found!', 'You recovered ${foundLoot.name} (${foundLoot.rarity.name.toUpperCase()}).');
       }
-    } else if (wasforced) {
-      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
-      int currentTotal = currentStats['total_depth'] ?? 0;
-      int newTotalDepth = (currentTotal - (finalDepth * 2)).clamp(0, 9999999);
-      int newForfeitDives = (currentStats['forfeit_dives'] ?? 0) + 1;
-      await dbHelper.updateUserStats({
-        'total_depth': newTotalDepth,
-        'forfeit_dives': newForfeitDives,
-      });
     }
 
     if (!mounted) return;
@@ -597,8 +255,17 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     final double screenHeight = MediaQuery.of(context).size.height;
     final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
 
+    // --- FORCED THEME-INDEPENDENT COLORS ---
+    
+    // Updated to a brighter, lighter ocean blue (Steel Blue/Light Sea Blue)
+    const Color surfaceBlue = Color(0xFF005A9E); 
+    
+    const Color deepBlack = Colors.black;
+    // Lerp background from Blue to Black based on 3000m depth
+    final Color backgroundColor = Color.lerp(surfaceBlue, deepBlack, (secondsPassed / 3000).clamp(0.0, 1.0))!;
+
     return Scaffold(
-      backgroundColor: Color.lerp(Theme.of(context).colorScheme.primary.withAlpha(180), Theme.of(context).colorScheme.surface, (secondsPassed / 3000).clamp(0, 1)),
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -609,9 +276,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
               curve: Curves.easeInOutCubic,
               top: isDiving ? screenHeight : screenHeight * 0.15,
               left: 0, right: 0,
-              child: Center(
-                child: _buildBoatWidget(selectedBoatStyle, isDiving),
-              ),
+              child: Center(child: _buildBoatWidget(selectedBoatStyle, isDiving)),
             ),
 
             Positioned(
@@ -620,7 +285,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text("TARGET", style: TextStyle(fontSize: 10, color: Colors.cyanAccent, letterSpacing: 1)),
-                  Text(targetDisplay, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(targetDisplay, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
             ),
@@ -668,7 +333,12 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
                     if (!isDiving)
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
-                        child: TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, size: 16), label: const Text("BACK TO SHIP")),
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                          onPressed: () => Navigator.pop(context), 
+                          icon: const Icon(Icons.arrow_back, size: 16), 
+                          label: const Text("BACK TO SHIP")
+                        ),
                       ),
                   ],
                 ),
