@@ -289,7 +289,7 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
               itemCount: upgrades.length,
               itemBuilder: (context, index) {
                 final upgrade = upgrades[index];
-                final isPurchased = upgrade.id == 5 || purchasedIds.contains(upgrade.id);
+                final isPurchased = upgrade.id == 1 || upgrade.id == 5 || purchasedIds.contains(upgrade.id);
 
                 return _buildUpgradeCard(
                   upgrade,

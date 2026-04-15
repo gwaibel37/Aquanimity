@@ -38,7 +38,7 @@ class _AquanimityAppState extends State<AquanimityApp> {
     final stats = await DatabaseHelper().getUserStats();
     if (!mounted) return;
     setState(() {
-      selectedThemeName = stats['selected_theme'] as String? ?? 'default';
+      selectedThemeName = stats['selected_theme'] as String? ?? 'Deep Sea Theme';
       customThemeColors = selectedThemeName == 'Custom Theme'
           ? _loadCustomThemeColors(stats)
           : null;
@@ -115,17 +115,17 @@ class _AquanimityAppState extends State<AquanimityApp> {
         );
       case 'Neon Dreams Theme':
         return _ThemeColors(
-          primary: Colors.pinkAccent,
-          accent: Colors.cyanAccent,
-          background: const Color(0xFF1B0730),
-          surface: const Color(0xFF2A0E3B),
+          primary: const Color.fromARGB(255, 255, 0, 127),
+          accent: const Color.fromARGB(255, 0, 255, 255),
+          background: const Color.fromARGB(255, 10, 5, 20),
+          surface: const Color.fromARGB(255, 20, 10, 30),
         );
       case 'Coral Reef Theme':
         return _ThemeColors(
-          primary: const Color.fromARGB(255, 4, 255, 180),
-          accent: const Color.fromARGB(255, 151, 250, 23),
-          background: const Color(0xFF2F1A0A),
-          surface: const Color(0xFF3B160F),
+          primary: const Color.fromARGB(255, 255, 127, 80),
+          accent: const Color.fromARGB(255, 0, 255, 200),
+          background: const Color.fromARGB(255, 15, 25, 35),
+          surface: const Color.fromARGB(255, 25, 35, 45),
         );
       case 'Bioluminescent Theme':
         return _ThemeColors(
@@ -143,10 +143,10 @@ class _AquanimityAppState extends State<AquanimityApp> {
         );
       default:
         return _ThemeColors(
-          primary: Colors.cyanAccent,
-          accent: Colors.cyanAccent,
-          background: const Color(0xFF001D3D),
-          surface: Colors.black,
+          primary: const Color.fromARGB(255, 2, 152, 252),
+          accent: const Color.fromARGB(255, 230, 255, 2),
+          background: const Color.fromARGB(255, 0, 15, 22),
+          surface: const Color.fromARGB(255, 0, 13, 17),
         );
     }
   }

@@ -55,7 +55,7 @@ class DatabaseHelper {
         last_dive_date TEXT,
         successful_dives INTEGER DEFAULT 0,
         forfeit_dives INTEGER DEFAULT 0,
-        selected_theme TEXT DEFAULT 'default',
+        selected_theme TEXT DEFAULT 'Deep Sea Theme',
         selected_boat_style TEXT DEFAULT 'Classic Sub',
         custom_theme_primary INTEGER,
         custom_theme_accent INTEGER,
@@ -101,8 +101,20 @@ class DatabaseHelper {
     // Insert default user stats
     await db.insert('user_stats', {
       'id': 1,
-      'selected_theme': 'default',
+      'selected_theme': 'Deep Sea Theme',
       'selected_boat_style': 'Classic Sub',
+    });
+
+    // Insert default purchased upgrades (Deep Sea Theme and Classic Sub)
+    await db.insert('purchased_upgrades', {
+      'upgrade_id': 1,
+      'upgrade_name': 'Deep Sea Theme',
+      'category': 'UpgradeCategory.theme',
+    });
+    await db.insert('purchased_upgrades', {
+      'upgrade_id': 5,
+      'upgrade_name': 'Classic Sub',
+      'category': 'UpgradeCategory.boatStyle',
     });
   }
 
