@@ -218,6 +218,23 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
                         Icons.directions_boat,
                       ),
                       const SizedBox(height: 40),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.secondary,
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back, size: 16),
+                        label: const Text(
+                          'BACK',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

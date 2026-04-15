@@ -425,6 +425,23 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
             ),
           ),
           const SizedBox(height: 60),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.cyanAccent[700],
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+            ),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, size: 16),
+            label: const Text(
+              'BACK',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
