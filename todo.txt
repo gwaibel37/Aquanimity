@@ -2,5 +2,5 @@
  - Every 1000 meters chance for unlocking Creatures - Creatures can be discovered after defeating them, aka keeping focused even 
    when they are "attacking." Once defeated, they appear in a logbook that shows a image, description, and depth where you find this creature.
    The creatures only have a chance of attacking in their ranges.
- - Add images and visuals rather stylized colors and symbols
+ - Make more lootbox stuff
 

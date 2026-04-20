@@ -95,6 +95,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       case 'Sleek Racer': imagePath = 'assets/boats/sleek_racer.png'; break;
       case 'Armored Beast': imagePath = 'assets/boats/armored_beast.png'; break;
       case 'Mythical Leviathan': imagePath = 'assets/boats/mythical_leviathan.png'; break;
+      case 'Ion Cruiser': imagePath = 'assets/boats/ion_cruiser.png'; break;
+      case 'Phantom Walker': imagePath = 'assets/boats/phantom_walker.png'; break;
+      case 'Deep Navigator': imagePath = 'assets/boats/deep_navigator.png'; break;
+      case 'Void Stalker': imagePath = 'assets/boats/void_stalker.png'; break;
+      case 'Titan Explorer': imagePath = 'assets/boats/titan_explorer.png'; break;
+      case 'Quantum Leap': imagePath = 'assets/boats/quantum_leap.png'; break;
+      case 'Abyss Sovereign': imagePath = 'assets/boats/abyss_sovereign.png'; break;
       default: imagePath = 'assets/boats/classic_sub.png';
     }
 
@@ -128,6 +135,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       case 'Sleek Racer': return _buildSleekRacer(boatColor);
       case 'Armored Beast': return _buildArmoredBeast(boatColor);
       case 'Mythical Leviathan': return _buildLeviathan(boatColor);
+      case 'Ion Cruiser': return _buildIonCruiser(boatColor);
+      case 'Phantom Walker': return _buildPhantomWalker(boatColor);
+      case 'Deep Navigator': return _buildDeepNavigator(boatColor);
+      case 'Void Stalker': return _buildVoidStalker(boatColor);
+      case 'Titan Explorer': return _buildTitanExplorer(boatColor);
+      case 'Quantum Leap': return _buildQuantumLeap(boatColor);
+      case 'Abyss Sovereign': return _buildAbyssSovereign(boatColor);
       default: return _buildClassicSub(boatColor);
     }
   }
@@ -137,6 +151,13 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       case 'Sleek Racer': return Colors.lightBlueAccent;
       case 'Armored Beast': return Colors.amberAccent.shade200;
       case 'Mythical Leviathan': return Colors.purpleAccent.shade200;
+      case 'Ion Cruiser': return Colors.yellowAccent;
+      case 'Phantom Walker': return Colors.grey.shade400;
+      case 'Deep Navigator': return Colors.blueAccent;
+      case 'Void Stalker': return Colors.deepPurple.shade200;
+      case 'Titan Explorer': return Colors.orange.shade300;
+      case 'Quantum Leap': return Colors.cyanAccent;
+      case 'Abyss Sovereign': return Colors.redAccent;
       default: return Colors.cyanAccent;
     }
   }
@@ -178,6 +199,84 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       Positioned(left: 12, child: Container(width: 22, height: 22, decoration: BoxDecoration(color: color.withAlpha(220), shape: BoxShape.circle))),
       Positioned(right: 8, child: Transform.rotate(angle: 0.4, child: Container(width: 30, height: 16, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(12))))),
       Positioned(top: 12, child: Row(mainAxisSize: MainAxisSize.min, children: [_boatEye(), const SizedBox(width: 18), _boatEye()])),
+    ]));
+  }
+
+  Widget _buildIonCruiser(Color color) {
+    return SizedBox(width: 145, height: 75, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 8, child: Container(width: 135, height: 28, decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: color.withAlpha(140), blurRadius: 16, spreadRadius: 4)]))),
+      Positioned(bottom: 12, child: Container(width: 120, height: 24, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(220), color.withAlpha(180)]), borderRadius: BorderRadius.circular(14)))),
+      Positioned(top: 6, child: Container(width: 50, height: 30, decoration: BoxDecoration(color: color.withAlpha(210), borderRadius: BorderRadius.circular(15)))),
+      Positioned(left: 18, top: 14, child: Container(width: 8, height: 16, decoration: BoxDecoration(color: Colors.white.withAlpha(80), borderRadius: BorderRadius.circular(4)))),
+      Positioned(right: 18, top: 14, child: Container(width: 8, height: 16, decoration: BoxDecoration(color: Colors.white.withAlpha(80), borderRadius: BorderRadius.circular(4)))),
+      Positioned(top: 26, child: Container(width: 60, height: 6, decoration: BoxDecoration(color: Colors.white30, borderRadius: BorderRadius.circular(3), boxShadow: [BoxShadow(color: color.withAlpha(60), blurRadius: 6)]))),
+    ]));
+  }
+
+  Widget _buildPhantomWalker(Color color) {
+    return SizedBox(width: 155, height: 80, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 10, child: Container(width: 140, height: 26, decoration: BoxDecoration(color: Colors.grey[950], borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: color.withAlpha(60), blurRadius: 12, spreadRadius: 2)]))),
+      Positioned(bottom: 14, child: Container(width: 130, height: 20, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(200), color.withAlpha(140)]), borderRadius: BorderRadius.circular(22)))),
+      Positioned(top: 8, child: Container(width: 55, height: 32, decoration: BoxDecoration(color: color.withAlpha(180), borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20))))),
+      Positioned(left: 28, top: 16, child: Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withAlpha(40), shape: BoxShape.circle))),
+      Positioned(right: 28, top: 16, child: Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withAlpha(40), shape: BoxShape.circle))),
+    ]));
+  }
+
+  Widget _buildDeepNavigator(Color color) {
+    return SizedBox(width: 150, height: 80, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 8, child: Container(width: 138, height: 30, decoration: BoxDecoration(color: Colors.blueGrey[900], borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: color.withAlpha(130), blurRadius: 18, spreadRadius: 3)]))),
+      Positioned(bottom: 12, child: Container(width: 122, height: 26, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)))),
+      Positioned(top: 10, child: Container(width: 52, height: 28, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(12)))),
+      Positioned(left: 24, top: 18, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.white30, shape: BoxShape.circle))),
+      Positioned(right: 24, top: 18, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.white30, shape: BoxShape.circle))),
+      Positioned(left: 38, bottom: 14, child: Row(children: [_boatPorthole(color), const SizedBox(width: 6), _boatPorthole(color), const SizedBox(width: 6), _boatPorthole(color)])),
+    ]));
+  }
+
+  Widget _buildVoidStalker(Color color) {
+    return SizedBox(width: 160, height: 85, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 8, child: Container(width: 145, height: 32, decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 18, spreadRadius: 3)]))),
+      Positioned(bottom: 12, child: Container(width: 130, height: 28, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]), borderRadius: BorderRadius.circular(16)))),
+      Positioned(top: 10, child: Transform.rotate(angle: -0.1, child: Container(width: 58, height: 32, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(12))))),
+      Positioned(left: 14, top: 20, child: Container(width: 16, height: 20, decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(8)))),
+      Positioned(right: 14, top: 20, child: Container(width: 16, height: 20, decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(8)))),
+      Positioned(bottom: 16, right: 10, child: Container(width: 12, height: 8, decoration: BoxDecoration(color: Colors.red.withAlpha(150), borderRadius: BorderRadius.circular(4)))),
+    ]));
+  }
+
+  Widget _buildTitanExplorer(Color color) {
+    return SizedBox(width: 170, height: 90, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 8, child: Container(width: 160, height: 35, decoration: BoxDecoration(color: Colors.grey[850], borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: color.withAlpha(130), blurRadius: 20, spreadRadius: 4)]))),
+      Positioned(bottom: 12, child: Container(width: 145, height: 30, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)))),
+      Positioned(top: 12, child: Container(width: 60, height: 35, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(14)))),
+      Positioned(left: 22, top: 20, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white30, shape: BoxShape.circle))),
+      Positioned(right: 22, top: 20, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.white30, shape: BoxShape.circle))),
+      Positioned(left: 30, bottom: 16, child: Row(children: [_boatPorthole(color), const SizedBox(width: 8), _boatPorthole(color), const SizedBox(width: 8), _boatPorthole(color), const SizedBox(width: 8), _boatPorthole(color)])),
+    ]));
+  }
+
+  Widget _buildQuantumLeap(Color color) {
+    return SizedBox(width: 150, height: 80, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 10, child: Container(width: 140, height: 28, decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: color.withAlpha(150), blurRadius: 16, spreadRadius: 4)]))),
+      Positioned(bottom: 14, child: Container(width: 125, height: 24, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(16)))),
+      Positioned(top: 8, child: Container(width: 54, height: 30, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withAlpha(100), width: 1.5)))),
+      Positioned(left: 20, top: 16, child: Container(width: 6, height: 16, decoration: BoxDecoration(color: Colors.white.withAlpha(120), borderRadius: BorderRadius.circular(3)))),
+      Positioned(right: 20, top: 16, child: Container(width: 6, height: 16, decoration: BoxDecoration(color: Colors.white.withAlpha(120), borderRadius: BorderRadius.circular(3)))),
+      Positioned(top: 25, child: Container(width: 70, height: 5, decoration: BoxDecoration(color: Colors.white30, borderRadius: BorderRadius.circular(2), boxShadow: [BoxShadow(color: color.withAlpha(80), blurRadius: 8)]))),
+    ]));
+  }
+
+  Widget _buildAbyssSovereign(Color color) {
+    return SizedBox(width: 170, height: 95, child: Stack(alignment: Alignment.center, children: [
+      Positioned(bottom: 10, child: Container(width: 155, height: 35, decoration: BoxDecoration(color: Colors.grey[950], borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: color.withAlpha(120), blurRadius: 22, spreadRadius: 5)]))),
+      Positioned(bottom: 14, child: Container(width: 140, height: 30, decoration: BoxDecoration(gradient: LinearGradient(colors: [color.withAlpha(240), color.withAlpha(160)]), borderRadius: BorderRadius.circular(24)))),
+      Positioned(top: 10, child: Container(width: 65, height: 38, decoration: BoxDecoration(color: color.withAlpha(220), borderRadius: BorderRadius.circular(16)))),
+      Positioned(left: 18, top: 18, child: Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withAlpha(140), shape: BoxShape.circle))),
+      Positioned(right: 18, top: 18, child: Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withAlpha(140), shape: BoxShape.circle))),
+      Positioned(top: 28, child: Container(width: 50, height: 8, decoration: BoxDecoration(color: Colors.white.withAlpha(100), borderRadius: BorderRadius.circular(4), boxShadow: [BoxShadow(color: color.withAlpha(100), blurRadius: 10)]))),
+      Positioned(bottom: 18, left: 20, child: Container(width: 10, height: 4, decoration: BoxDecoration(color: Colors.red.withAlpha(160), borderRadius: BorderRadius.circular(2)))),
+      Positioned(bottom: 18, right: 20, child: Container(width: 10, height: 4, decoration: BoxDecoration(color: Colors.red.withAlpha(160), borderRadius: BorderRadius.circular(2)))),
     ]));
   }
 

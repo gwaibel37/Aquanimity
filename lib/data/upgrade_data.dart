@@ -69,6 +69,55 @@ class UpgradeData {
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.legendary,
     },
+    {
+      'id': 10,
+      'name': 'Ion Cruiser',
+      'description': 'A sleek, electrified vessel powered by ionic propulsion',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.common,
+    },
+    {
+      'id': 11,
+      'name': 'Phantom Walker',
+      'description': 'A silent, advanced cloaking submarine that moves undetected',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.uncommon,
+    },
+    {
+      'id': 12,
+      'name': 'Deep Navigator',
+      'description': 'A robust explorer with advanced sonar and mapping systems',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.uncommon,
+    },
+    {
+      'id': 13,
+      'name': 'Void Stalker',
+      'description': 'A predatory submarine designed for extreme depths and combat',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.rare,
+    },
+    {
+      'id': 14,
+      'name': 'Titan Explorer',
+      'description': 'A massive, heavily reinforced submarine for the deepest trenches',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.rare,
+    },
+    {
+      'id': 15,
+      'name': 'Quantum Leap',
+      'description': 'A futuristic submarine with impossible technologies from beyond',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.legendary,
+    },
+    {
+      'id': 16,
+      'name': 'Abyss Sovereign',
+      'description': 'The ruler of the deep, an interdimensional submarine of immense power',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.legendary,
+    },
   ];
 
   static Upgrade getUpgradeById(int id) {
