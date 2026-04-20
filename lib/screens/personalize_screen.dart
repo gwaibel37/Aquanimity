@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
@@ -81,7 +83,7 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
 
       try {
         // Load and decode the image
-        final imageBytes = await File(image.path).readAsBytes();
+        final imageBytes = await image.readAsBytes();
         final decodedImage = img.decodeImage(imageBytes);
 
         if (decodedImage == null) {
@@ -135,18 +137,39 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
         );
 
         // Save the image to app storage using a fresh filename so Flutter reloads it
-        final Directory appDir = await getApplicationDocumentsDirectory();
-        final String imagePath = '${appDir.path}/custom_theme_background_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        await File(image.path).copy(imagePath);
+        String? imageData;
+        if (!kIsWeb) {
+          final Directory appDir = await getApplicationDocumentsDirectory();
+          final String imagePath = '${appDir.path}/custom_theme_background_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await File(image.path).copy(imagePath);
+          imageData = imagePath;
+        } else {
+          // On web, compress and store as base64
+          // Resize image to reduce size (max 800x600)
+          var decodedResized = img.copyResize(decodedImage, width: 800, height: 600);
+          List<int> resizedBytes = img.encodeJpg(decodedResized, quality: 85);
+          
+          String mimeType = 'image/jpeg';
+          imageData = 'data:$mimeType;base64,${base64Encode(resizedBytes)}';
+        }
 
-        // Save custom theme colors and image path to database
+        // Save custom theme colors and image data to database
         await _dbHelper.updateUserStats({
           'custom_theme_primary': primary.toARGB32(),
           'custom_theme_accent': accent.toARGB32(),
           'custom_theme_background': background.toARGB32(),
           'custom_theme_surface': surface.toARGB32(),
-          'custom_background_image': imagePath,
+          'custom_background_image': imageData,
         });
+
+        // Verify the data was saved
+        final savedStats = await _dbHelper.getUserStats();
+        final savedImagePath = savedStats['custom_background_image'] as String?;
+        print('DEBUG: Image data saved. Length: ${imageData.length}, Retrieved length: ${savedImagePath?.length}');
+        print('DEBUG: Image starts with data: ${savedImagePath?.startsWith('data:') ?? false}');
+
+        // Add a small delay to ensure SharedPreferences persists data
+        await Future.delayed(const Duration(milliseconds: 500));
 
         // Update selected theme if not already set to Custom Theme
         if (selectedTheme != 'Custom Theme') {

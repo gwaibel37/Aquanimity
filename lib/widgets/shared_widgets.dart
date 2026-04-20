@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class PDANotification extends StatelessWidget {
@@ -6,7 +8,12 @@ class PDANotification extends StatelessWidget {
   final Color color;
   final bool visible;
 
-  const PDANotification({super.key, required this.message, required this.color, required this.visible});
+  const PDANotification({
+    super.key,
+    required this.message,
+    required this.color,
+    required this.visible,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +37,17 @@ class PDANotification extends StatelessWidget {
             children: [
               Icon(Icons.sensors, color: color, size: 24),
               const SizedBox(width: 15),
-              Flexible(child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.1))),
+              Flexible(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -39,10 +56,77 @@ class PDANotification extends StatelessWidget {
   }
 }
 
-class AbyssalBackground extends StatelessWidget {
+class AbyssalBackground extends StatefulWidget {
   final Widget child;
   final String? backgroundImagePath;
-  const AbyssalBackground({super.key, required this.child, this.backgroundImagePath});
+  const AbyssalBackground({
+    super.key,
+    required this.child,
+    this.backgroundImagePath,
+  });
+
+  @override
+  State<AbyssalBackground> createState() => _AbyssalBackgroundState();
+}
+
+class _AbyssalBackgroundState extends State<AbyssalBackground> {
+  ImageProvider? _backgroundImage;
+  bool _hasBackgroundImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveBackgroundImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant AbyssalBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.backgroundImagePath != widget.backgroundImagePath) {
+      _resolveBackgroundImage();
+    }
+  }
+
+  void _resolveBackgroundImage() {
+    final String? path = widget.backgroundImagePath;
+    if (path != null) {
+      print('DEBUG: _resolveBackgroundImage called with path: ${path.substring(0, path.length < 100 ? path.length : 100)}');
+    } else {
+      print('DEBUG: _resolveBackgroundImage called with null path');
+    }
+    if (path != null && path.isNotEmpty) {
+      if (path.startsWith('data:')) {
+        // Handle data URL (base64 encoded image)
+        try {
+          // Extract base64 data from data URL
+          final parts = path.split(',');
+          if (parts.length < 2) {
+            throw Exception('Invalid data URL format');
+          }
+          final base64Data = parts.last;
+          final bytes = base64Decode(base64Data);
+          _backgroundImage = MemoryImage(bytes);
+          _hasBackgroundImage = true;
+          print('DEBUG: Successfully decoded data URL image, bytes: ${bytes.length}');
+        } catch (e) {
+          // If decoding fails, set no background
+          print('DEBUG: Failed to decode image: $e');
+          _backgroundImage = null;
+          _hasBackgroundImage = false;
+        }
+      } else if (!kIsWeb && File(path).existsSync()) {
+        // Handle file path on mobile
+        _backgroundImage = FileImage(File(path));
+        _hasBackgroundImage = true;
+      } else {
+        _backgroundImage = null;
+        _hasBackgroundImage = false;
+      }
+    } else {
+      _backgroundImage = null;
+      _hasBackgroundImage = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,14 +134,14 @@ class AbyssalBackground extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        image: backgroundImagePath != null && File(backgroundImagePath!).existsSync()
+        image: _hasBackgroundImage
             ? DecorationImage(
-                image: FileImage(File(backgroundImagePath!)),
+                image: _backgroundImage!,
                 fit: BoxFit.cover,
-                opacity: 0.7, // Make the image slightly transparent so text is readable
+                opacity: 0.7,
               )
             : null,
-        gradient: (backgroundImagePath == null || !File(backgroundImagePath!).existsSync())
+        gradient: !_hasBackgroundImage
             ? RadialGradient(
                 center: Alignment.topCenter,
                 radius: 1.5,
@@ -69,7 +153,7 @@ class AbyssalBackground extends StatelessWidget {
               )
             : null,
       ),
-      child: child,
+      child: widget.child,
     );
   }
 }
@@ -78,19 +162,26 @@ class OneShotFloat extends StatelessWidget {
   final Widget child;
   final double offset;
   final int delayMs;
-  const OneShotFloat({super.key, required this.child, this.offset = 30.0, this.delayMs = 0});
+  const OneShotFloat({
+    super.key,
+    required this.child,
+    this.offset = 30.0,
+    this.delayMs = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      key: UniqueKey(),
       tween: Tween(begin: offset, end: 0.0),
       duration: Duration(milliseconds: 800 + delayMs),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Transform.translate(
           offset: Offset(0, value),
-          child: Opacity(opacity: (1 - (value / offset)).clamp(0, 1), child: child),
+          child: Opacity(
+            opacity: (1 - (value / offset)).clamp(0, 1),
+            child: child,
+          ),
         );
       },
       child: child,

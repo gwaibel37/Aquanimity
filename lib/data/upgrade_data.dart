@@ -3,7 +3,7 @@ import '../models/loot_box.dart';
 
 class UpgradeData {
   static const List<Map<String, dynamic>> upgrades = [
-    // Themes
+    // Common Rarity
     {
       'id': 1,
       'name': 'Deep Sea Theme',
@@ -12,36 +12,6 @@ class UpgradeData {
       'minRarity': LootBoxRarity.common,
     },
     {
-      'id': 2,
-      'name': 'Neon Dreams Theme',
-      'description': 'Bright neon colors that pulse with energy',
-      'category': UpgradeCategory.theme,
-      'minRarity': LootBoxRarity.uncommon,
-    },
-    {
-      'id': 3,
-      'name': 'Coral Reef Theme',
-      'description': 'Vibrant coral colors with tropical vibes',
-      'category': UpgradeCategory.theme,
-      'minRarity': LootBoxRarity.rare,
-    },
-    {
-      'id': 4,
-      'name': 'Bioluminescent Theme',
-      'description': 'Glowing phosphorescent colors from the deep',
-      'category': UpgradeCategory.theme,
-      'minRarity': LootBoxRarity.legendary,
-    },
-    {
-      'id': 9,
-      'name': 'Custom Theme',
-      'description': 'Upload your own image to create a custom theme',
-      'category': UpgradeCategory.theme,
-      'minRarity': LootBoxRarity.legendary,
-    },
-
-    // Boat Styles
-    {
       'id': 5,
       'name': 'Classic Sub',
       'description': 'The standard submarine design',
@@ -49,32 +19,27 @@ class UpgradeData {
       'minRarity': LootBoxRarity.common,
     },
     {
-      'id': 6,
-      'name': 'Sleek Racer', // Woah there speed racer 
-      'description': 'A sleek, aerodynamic submarine built for speed',
-      'category': UpgradeCategory.boatStyle,
-      'minRarity': LootBoxRarity.uncommon,
-    },
-    {
-      'id': 7,
-      'name': 'Armored Beast',
-      'description': 'A heavily armored submarine for deep dives',
-      'category': UpgradeCategory.boatStyle,
-      'minRarity': LootBoxRarity.rare,
-    },
-    {
-      'id': 8,
-      'name': 'Mythical Leviathan',
-      'description': 'A legendary creature-inspired submarine',
-      'category': UpgradeCategory.boatStyle,
-      'minRarity': LootBoxRarity.legendary,
-    },
-    {
       'id': 10,
       'name': 'Ion Cruiser',
       'description': 'A sleek, electrified vessel powered by ionic propulsion',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.common,
+    },
+
+    // Uncommon Rarity
+    {
+      'id': 2,
+      'name': 'Neon Dreams Theme',
+      'description': 'Bright neon colors that pulse with energy',
+      'category': UpgradeCategory.theme,
+      'minRarity': LootBoxRarity.uncommon,
+    },
+    {
+      'id': 6,
+      'name': 'Sleek Racer', // Woah there speed racer 
+      'description': 'A sleek, aerodynamic submarine built for speed',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.uncommon,
     },
     {
       'id': 11,
@@ -90,6 +55,22 @@ class UpgradeData {
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.uncommon,
     },
+
+    // Rare Rarity
+    {
+      'id': 3,
+      'name': 'Coral Reef Theme',
+      'description': 'Vibrant coral colors with tropical vibes',
+      'category': UpgradeCategory.theme,
+      'minRarity': LootBoxRarity.rare,
+    },
+    {
+      'id': 7,
+      'name': 'Armored Beast',
+      'description': 'A heavily armored submarine for deep dives',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.rare,
+    },
     {
       'id': 13,
       'name': 'Void Stalker',
@@ -103,6 +84,29 @@ class UpgradeData {
       'description': 'A massive, heavily reinforced submarine for the deepest trenches',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.rare,
+    },
+
+    // Legendary Rarity
+    {
+      'id': 4,
+      'name': 'Bioluminescent Theme',
+      'description': 'Glowing phosphorescent colors from the deep',
+      'category': UpgradeCategory.theme,
+      'minRarity': LootBoxRarity.legendary,
+    },
+    {
+      'id': 8,
+      'name': 'Mythical Leviathan',
+      'description': 'A legendary creature-inspired submarine',
+      'category': UpgradeCategory.boatStyle,
+      'minRarity': LootBoxRarity.legendary,
+    },
+    {
+      'id': 9,
+      'name': 'Custom Theme',
+      'description': 'Upload your own image to create a custom theme',
+      'category': UpgradeCategory.theme,
+      'minRarity': LootBoxRarity.legendary,
     },
     {
       'id': 15,

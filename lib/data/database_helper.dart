@@ -396,8 +396,15 @@ class DatabaseHelper {
   Future<void> purchaseUpgrade(int upgradeId, String upgradeName, String category) async {
     await _ensureInitialized();
     if (kIsWeb) {
-      // For web, we'd store this in SharedPreferences if needed
-      // For now, we'll skip it since web isn't the focus
+      List<String> purchasedUpgrades = _prefs!.getStringList('purchased_upgrades') ?? [];
+      Map<String, dynamic> upgrade = {
+        'upgrade_id': upgradeId,
+        'upgrade_name': upgradeName,
+        'category': category,
+        'purchased_date': DateTime.now().toIso8601String(),
+      };
+      purchasedUpgrades.add(jsonEncode(upgrade));
+      await _prefs!.setStringList('purchased_upgrades', purchasedUpgrades);
     } else {
       final db = await database;
       await db.insert('purchased_upgrades', {
@@ -411,23 +418,47 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getPurchasedUpgrades() async {
     await _ensureInitialized();
     if (kIsWeb) {
-      return []; // Return empty for web for now
+      List<String> purchasedUpgradesStrings = _prefs!.getStringList('purchased_upgrades') ?? [];
+      List<Map<String, dynamic>> purchasedUpgrades = [];
+      for (int i = 0; i < purchasedUpgradesStrings.length; i++) {
+        try {
+          Map<String, dynamic> upgrade = (jsonDecode(purchasedUpgradesStrings[i]) as Map<dynamic, dynamic>).cast<String, dynamic>();
+          upgrade['id'] = i; // Add an id for compatibility
+          purchasedUpgrades.add(upgrade);
+        } catch (e) {
+          // Skip invalid items
+        }
+      }
+      return purchasedUpgrades.reversed.toList();
+    } else {
+      final db = await database;
+      return await db.query('purchased_upgrades');
     }
-    final db = await database;
-    return await db.query('purchased_upgrades');
   }
 
   Future<bool> isUpgradePurchased(int upgradeId) async {
     await _ensureInitialized();
     if (kIsWeb) {
+      List<String> purchasedUpgradesStrings = _prefs!.getStringList('purchased_upgrades') ?? [];
+      for (String upgradeString in purchasedUpgradesStrings) {
+        try {
+          Map<String, dynamic> upgrade = (jsonDecode(upgradeString) as Map<dynamic, dynamic>).cast<String, dynamic>();
+          if (upgrade['upgrade_id'] == upgradeId) {
+            return true;
+          }
+        } catch (e) {
+          // Skip invalid items
+        }
+      }
       return false;
+    } else {
+      final db = await database;
+      final result = await db.query(
+        'purchased_upgrades',
+        where: 'upgrade_id = ?',
+        whereArgs: [upgradeId],
+      );
+      return result.isNotEmpty;
     }
-    final db = await database;
-    final result = await db.query(
-      'purchased_upgrades',
-      where: 'upgrade_id = ?',
-      whereArgs: [upgradeId],
-    );
-    return result.isNotEmpty;
   }
 }

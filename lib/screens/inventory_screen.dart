@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart'; // Added for feedback
 import '../models/treasure.dart';
@@ -103,7 +104,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
 
     if (count > 0) {
-      if (await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
+      if (!kIsWeb && await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
       if(!mounted) return; // Safety check before showing SnackBar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
