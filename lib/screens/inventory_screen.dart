@@ -185,38 +185,83 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           // Hero tags must be unique even if items have the same name
                           final String heroTag = "treasure_${item['name']}_${item['rarity']}_$index";
 
-                          return Hero(
-                            tag: heroTag,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => Navigator.push(
-                                  context, 
-                                  MaterialPageRoute(builder: (context) => TreasureDetailScreen(item: item, rarity: rarity, heroTag: heroTag))
-                                ),
+                          return Dismissible(
+                            key: Key('item_$index'),
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (direction) async {
+                              final itemName = item['name'];
+                              final coinValue = rarity.value;
+                              
+                              final dbHelper = DatabaseHelper();
+                              await dbHelper.removeTreasure(index);
+                              
+                              // Update user stats before async operations
+                              await dbHelper.updateUserStats({
+                                'total_coins': totalCoins + coinValue,
+                              });
+                              
+                              setState(() {
+                                totalCoins += coinValue;
+                                items.removeAt(index);
+                              });
+                              
+                              if (!mounted) return;
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: rarity.color.withAlpha(200),
+                                  content: Text("Sold $itemName for $coinValue coins!",
+                                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  duration: const Duration(seconds: 2),
+                                )
+                              );
+
+                              if (!kIsWeb && await Vibration.hasVibrator()) {
+                                Vibration.vibrate(duration: 50);
+                              }
+                            },
+                            background: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red.withAlpha(180),
                                 borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: rarity.color.withAlpha(15),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: rarity.color.withAlpha(60), width: 1.5),
+                              ),
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              child: const Icon(Icons.sell, color: Colors.white, size: 24),
+                            ),
+                            child: Hero(
+                              tag: heroTag,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => Navigator.push(
+                                    context, 
+                                    MaterialPageRoute(builder: (context) => TreasureDetailScreen(item: item, rarity: rarity, heroTag: heroTag))
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 12),
-                                      Icon(Icons.token, color: rarity.color, size: 24),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
-                                            Text("${rarity.value}c", style: TextStyle(color: rarity.color.withAlpha(180), fontSize: 11, fontWeight: FontWeight.w600)),
-                                          ],
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: rarity.color.withAlpha(15),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: rarity.color.withAlpha(60), width: 1.5),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.token, color: rarity.color, size: 24),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                              Text("${rarity.value}c", style: TextStyle(color: rarity.color.withAlpha(180), fontSize: 11, fontWeight: FontWeight.w600)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
