@@ -1362,6 +1362,36 @@ class _DiveScreenState extends State<DiveScreen>
     }
   }
 
+  Widget _buildWaterBackground(Color baseColor, double screenHeight) {
+    return Stack(
+      children: [
+        // Base gradient background
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                baseColor,
+                Color.lerp(baseColor, Colors.black, 0.3)!,
+                Color.lerp(baseColor, Colors.black, 0.6)!,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        ),
+        // Floating bubbles
+        Positioned.fill(
+          child: _BubbleLayer(
+            particleCount: 30,
+            screenHeight: screenHeight,
+            depth: secondsPassed,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
@@ -1387,6 +1417,9 @@ class _DiveScreenState extends State<DiveScreen>
       body: SafeArea(
         child: Stack(
           children: [
+            // Water effect background
+            _buildWaterBackground(backgroundColor, screenHeight),
+
             PDANotification(
               message: pdaMessage,
               color: pdaColor,
@@ -1527,5 +1560,155 @@ class _DiveScreenState extends State<DiveScreen>
         ),
       ),
     );
+  }
+}
+
+// Bubble layer widget for clean bubble animation
+class _BubbleLayer extends StatefulWidget {
+  final int particleCount;
+  final double screenHeight;
+  final int depth;
+
+  const _BubbleLayer({
+    required this.particleCount,
+    required this.screenHeight,
+    required this.depth,
+  });
+
+  @override
+  State<_BubbleLayer> createState() => _BubbleLayerState();
+}
+
+class _BubbleLayerState extends State<_BubbleLayer>
+    with TickerProviderStateMixin {
+  late List<_Bubble> bubbles;
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeBubbles();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 16),
+    )..repeat();
+  }
+
+  void _initializeBubbles() {
+    final random = math.Random();
+    bubbles = List.generate(
+      widget.particleCount,
+      (i) => _Bubble(
+        x: random.nextDouble(),
+        y: 1.0 + (random.nextDouble() * 0.2),
+        size: random.nextDouble() * 8 + 2,
+        speed: random.nextDouble() * 0.6 + 0.8,
+        wobble: random.nextDouble() * 0.3,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_BubbleLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.particleCount != widget.particleCount) {
+      _initializeBubbles();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _BubblePainter(
+            bubbles: bubbles,
+            progress: _controller.value,
+          ),
+          size: Size.infinite,
+        );
+      },
+    );
+  }
+}
+
+class _Bubble {
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+  final double wobble;
+
+  _Bubble({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+    required this.wobble,
+  });
+}
+
+class _BubblePainter extends CustomPainter {
+  final List<_Bubble> bubbles;
+  final double progress;
+
+  _BubblePainter({
+    required this.bubbles,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Fade out all bubbles in the last 25% of the animation cycle
+    final cycleEndFade = (progress > 0.75) ? (1.0 - (progress - 0.75) / 0.25) : 1.0;
+    
+    for (final bubble in bubbles) {
+      // Calculate position with smooth upward movement (no wrapping)
+      final newY = bubble.y - progress * bubble.speed;
+      
+      // Skip bubbles that are off-screen (above or below)
+      if (newY < -0.1 || newY > 1.1) continue;
+      
+      // Add subtle side-to-side wobble for natural movement
+      final wobbleAmount = math.sin(progress * 3 * math.pi + bubble.wobble * 4 * math.pi) * 0.04;
+      final newX = (bubble.x + wobbleAmount).clamp(0.0, 1.0);
+
+      // Create bubble with gradient for depth effect
+      final bubbleX = newX * size.width;
+      final bubbleY = newY * size.height;
+      
+      // Fade out as bubble rises to top, and also fade out at cycle end
+      final fadeOut = (1.0 - (newY * newY).clamp(0.0, 1.0)) * cycleEndFade;
+
+      // Outer bubble circle (slightly transparent)
+      final bubblePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.25 * fadeOut)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+
+      canvas.drawCircle(Offset(bubbleX, bubbleY), bubble.size, bubblePaint);
+
+      // Inner bubble highlight
+      final highlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.4 * fadeOut);
+
+      canvas.drawCircle(
+        Offset(bubbleX - bubble.size * 0.3, bubbleY - bubble.size * 0.3),
+        bubble.size * 0.3,
+        highlightPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BubblePainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }

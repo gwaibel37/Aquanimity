@@ -90,9 +90,7 @@ class _AbyssalBackgroundState extends State<AbyssalBackground> {
   void _resolveBackgroundImage() {
     final String? path = widget.backgroundImagePath;
     if (path != null) {
-      print('DEBUG: _resolveBackgroundImage called with path: ${path.substring(0, path.length < 100 ? path.length : 100)}');
-    } else {
-      print('DEBUG: _resolveBackgroundImage called with null path');
+      // Background image path provided
     }
     if (path != null && path.isNotEmpty) {
       if (path.startsWith('data:')) {
@@ -107,10 +105,8 @@ class _AbyssalBackgroundState extends State<AbyssalBackground> {
           final bytes = base64Decode(base64Data);
           _backgroundImage = MemoryImage(bytes);
           _hasBackgroundImage = true;
-          print('DEBUG: Successfully decoded data URL image, bytes: ${bytes.length}');
         } catch (e) {
           // If decoding fails, set no background
-          print('DEBUG: Failed to decode image: $e');
           _backgroundImage = null;
           _hasBackgroundImage = false;
         }

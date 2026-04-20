@@ -162,12 +162,6 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
           'custom_background_image': imageData,
         });
 
-        // Verify the data was saved
-        final savedStats = await _dbHelper.getUserStats();
-        final savedImagePath = savedStats['custom_background_image'] as String?;
-        print('DEBUG: Image data saved. Length: ${imageData.length}, Retrieved length: ${savedImagePath?.length}');
-        print('DEBUG: Image starts with data: ${savedImagePath?.startsWith('data:') ?? false}');
-
         // Add a small delay to ensure SharedPreferences persists data
         await Future.delayed(const Duration(milliseconds: 500));
 
