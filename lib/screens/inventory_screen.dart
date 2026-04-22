@@ -74,20 +74,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     
     int count = 0;
     int gain = 0;
-    List<int> indicesToRemove = [];
+    List<int> idsToRemove = [];
     
     // Find items to remove and calculate gain
     for (int i = 0; i < inventoryItems.length; i++) {
       if (inventoryItems[i]['rarity'] == rarity.name) {
         count++;
         gain += rarity.value;
-        indicesToRemove.add(i);
+        idsToRemove.add(inventoryItems[i]['id'] as int);
       }
     }
     
     // Remove items from storage (database or SharedPreferences)
-    for (int index in indicesToRemove.reversed) { // Remove in reverse order to maintain indices
-      await dbHelper.removeTreasure(index);
+    for (int id in idsToRemove.reversed) {
+      await dbHelper.removeTreasure(id);
     }
     
     // Update coins
@@ -104,15 +104,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
 
     if (count > 0) {
-      if (!kIsWeb && await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
-      if(!mounted) return; // Safety check before showing SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
+      final bool canVibrate = !kIsWeb && await Vibration.hasVibrator();
+      if (!mounted) return; // Safety check before showing SnackBar
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
           backgroundColor: rarity.color.withAlpha(200), 
           content: Text("Liquidated $count ${rarity.name} items for $gain coins!", 
           style: const TextStyle(fontWeight: FontWeight.bold))
         )
       );
+
+      if (canVibrate) {
+        Vibration.vibrate(duration: 50);
+      }
     }
   }
 
@@ -184,30 +189,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
                           // Hero tags must be unique even if items have the same name
                           final String heroTag = "treasure_${item['name']}_${item['rarity']}_$index";
+                          final int treasureId = item['id'] as int;
 
                           return Dismissible(
-                            key: Key('item_$index'),
+                            key: ValueKey(treasureId),
                             direction: DismissDirection.endToStart,
                             onDismissed: (direction) async {
                               final itemName = item['name'];
                               final coinValue = rarity.value;
+                              final messenger = ScaffoldMessenger.of(context);
                               
                               final dbHelper = DatabaseHelper();
-                              await dbHelper.removeTreasure(index);
+                              await dbHelper.removeTreasure(treasureId);
                               
                               // Update user stats before async operations
                               await dbHelper.updateUserStats({
                                 'total_coins': totalCoins + coinValue,
                               });
-                              
+
+                              final bool canVibrate = !kIsWeb && await Vibration.hasVibrator();
+                              if (!mounted) return;
+
                               setState(() {
                                 totalCoins += coinValue;
-                                items.removeAt(index);
+                                items.removeWhere((it) => it['id'] == treasureId);
                               });
-                              
-                              if (!mounted) return;
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
+
+                              messenger.showSnackBar(
                                 SnackBar(
                                   backgroundColor: rarity.color.withAlpha(200),
                                   content: Text("Sold $itemName for $coinValue coins!",
@@ -216,7 +224,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 )
                               );
 
-                              if (!kIsWeb && await Vibration.hasVibrator()) {
+                              if (canVibrate) {
                                 Vibration.vibrate(duration: 50);
                               }
                             },

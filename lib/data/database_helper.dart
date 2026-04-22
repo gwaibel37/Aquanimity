@@ -328,7 +328,7 @@ class DatabaseHelper {
       for (int i = 0; i < inventoryStrings.length; i++) {
         try {
           Map<String, dynamic> item = (jsonDecode(inventoryStrings[i]) as Map<dynamic, dynamic>).cast<String, dynamic>();
-          item['id'] = i;
+          item['id'] = inventoryStrings.length - 1 - i;
           inventory.add(item);
         } catch (e) {
           // Skip invalid items
