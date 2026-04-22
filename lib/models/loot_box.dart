@@ -50,6 +50,7 @@ class LootBox {
 enum UpgradeCategory {
   theme,
   boatStyle,
+  perk,
 }
 
 class Upgrade {
@@ -59,6 +60,7 @@ class Upgrade {
   final UpgradeCategory category;
   final LootBoxRarity minRarity;
   final bool isPurchased;
+  final Map<String, dynamic>? effect;
 
   Upgrade({
     required this.id,
@@ -67,5 +69,6 @@ class Upgrade {
     required this.category,
     required this.minRarity,
     this.isPurchased = false,
+    this.effect,
   });
 }

@@ -25,6 +25,14 @@ class UpgradeData {
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.common,
     },
+    {
+      'id': 17,
+      'name': 'Coin Multiplier +5%',
+      'description': 'Increases coin earnings from dives by 5%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.common,
+      'effect': {'type': 'coinMultiplier', 'value': 0.05},
+    },
 
     // Uncommon Rarity
     {
@@ -55,6 +63,22 @@ class UpgradeData {
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.uncommon,
     },
+    {
+      'id': 18,
+      'name': 'Coin Multiplier +10%',
+      'description': 'Increases coin earnings from dives by 10%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.uncommon,
+      'effect': {'type': 'coinMultiplier', 'value': 0.10},
+    },
+    {
+      'id': 19,
+      'name': 'Depth Bonus +2m',
+      'description': 'Increases maximum dive depth by 2 meters',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.uncommon,
+      'effect': {'type': 'depthBonus', 'value': 2},
+    },
 
     // Rare Rarity
     {
@@ -84,6 +108,22 @@ class UpgradeData {
       'description': 'A massive, heavily reinforced submarine for the deepest trenches',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.rare,
+    },
+    {
+      'id': 20,
+      'name': 'Coin Multiplier +15%',
+      'description': 'Increases coin earnings from dives by 15%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.rare,
+      'effect': {'type': 'coinMultiplier', 'value': 0.15},
+    },
+    {
+      'id': 21,
+      'name': 'Lucky Charm +10%',
+      'description': 'Increases chance of finding higher rarity treasures by 10%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.rare,
+      'effect': {'type': 'luckBonus', 'value': 0.10},
     },
 
     // Legendary Rarity
@@ -122,6 +162,30 @@ class UpgradeData {
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.legendary,
     },
+    {
+      'id': 22,
+      'name': 'Coin Multiplier +25%',
+      'description': 'Increases coin earnings from dives by 25%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.legendary,
+      'effect': {'type': 'coinMultiplier', 'value': 0.25},
+    },
+    {
+      'id': 23,
+      'name': 'Lucky Charm +20%',
+      'description': 'Increases chance of finding higher rarity treasures by 20%',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.legendary,
+      'effect': {'type': 'luckBonus', 'value': 0.20},
+    },
+    {
+      'id': 24,
+      'name': 'Depth Bonus +5m',
+      'description': 'Increases maximum dive depth by 5 meters',
+      'category': UpgradeCategory.perk,
+      'minRarity': LootBoxRarity.legendary,
+      'effect': {'type': 'depthBonus', 'value': 5},
+    },
   ];
 
   static Upgrade getUpgradeById(int id) {
@@ -135,6 +199,7 @@ class UpgradeData {
       description: data['description'],
       category: data['category'],
       minRarity: data['minRarity'],
+      effect: data['effect'],
     );
   }
 
@@ -151,23 +216,21 @@ class UpgradeData {
         .toList();
   }
 
-  static Upgrade getRandomUpgradeForRarity(LootBoxRarity rarity, {Set<int>? excludeIds}) {
+  static Upgrade? getRandomUpgradeForRarity(LootBoxRarity rarity, {Set<int>? excludeIds}) {
     final possible = upgrades
         .where((u) => _rarityValue(u['minRarity']) <= _rarityValue(rarity))
         .where((u) => excludeIds == null || !excludeIds.contains(u['id']))
         .toList();
-    final fallback = upgrades
-        .where((u) => _rarityValue(u['minRarity']) <= _rarityValue(rarity))
-        .toList();
-    final validChoices = possible.isNotEmpty ? possible : fallback;
+    if (possible.isEmpty) return null;
     final random = math.Random();
-    final selected = validChoices[random.nextInt(validChoices.length)];
+    final selected = possible[random.nextInt(possible.length)];
     return Upgrade(
       id: selected['id'],
       name: selected['name'],
       description: selected['description'],
       category: selected['category'],
       minRarity: selected['minRarity'],
+      effect: selected['effect'],
     );
   }
 

@@ -8,6 +8,7 @@ import '../models/treasure.dart';
 import '../services/notification_service.dart';
 import '../widgets/shared_widgets.dart';
 import '../data/database_helper.dart';
+import '../data/upgrade_data.dart';
 import 'mission_report_screen.dart';
 
 class DiveScreen extends StatefulWidget {
@@ -1296,11 +1297,11 @@ class _DiveScreenState extends State<DiveScreen>
   Future<void> stopDive({bool wasforced = false}) async {
     timer?.cancel();
     timer = null;
-    final int finalDepth = secondsPassed;
     final dbHelper = DatabaseHelper();
 
     Treasure? foundLoot;
     int coinReward = 0;
+    int finalDepth = secondsPassed;
     bool isDuplicate = false;
     bool isSuccessful =
         !wasforced &&
@@ -1314,6 +1315,27 @@ class _DiveScreenState extends State<DiveScreen>
       bool isFirstDiveToday =
           (currentStats['last_dive_date'] ?? "") != todayStr;
 
+      // Get purchased perks for bonuses
+      final purchasedUpgrades = await dbHelper.getPurchasedUpgrades();
+      double coinMultiplier = 1.0;
+      double luckBonus = 0.0;
+      int depthBonus = 0;
+      for (var upgrade in purchasedUpgrades) {
+        final upgradeData = UpgradeData.getUpgradeById(upgrade['upgrade_id']);
+        if (upgradeData.effect != null) {
+          final effect = upgradeData.effect!;
+          if (effect['type'] == 'coinMultiplier') {
+            coinMultiplier += effect['value'];
+          } else if (effect['type'] == 'luckBonus') {
+            luckBonus += effect['value'];
+          } else if (effect['type'] == 'depthBonus') {
+            depthBonus += (effect['value'] as num).toInt();
+          }
+        }
+      }
+
+      final int finalDepth = secondsPassed + depthBonus;
+
       await dbHelper.updateUserStats({
         'total_depth': (currentStats['total_depth'] ?? 0) + finalDepth,
         'weekly_depth': (currentStats['weekly_depth'] ?? 0) + finalDepth,
@@ -1323,12 +1345,13 @@ class _DiveScreenState extends State<DiveScreen>
       foundLoot = Treasure.generate(
         finalDepth,
         guaranteedHighestInBracket: isFirstDiveToday,
+        luckBonus: luckBonus,
       );
       List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
       isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
 
       if (isDuplicate) {
-        coinReward = foundLoot.rarity.value;
+        coinReward = (foundLoot.rarity.value * coinMultiplier).round();
         await dbHelper.updateUserStats({
           'total_coins': (currentStats['total_coins'] ?? 0) + coinReward,
         });

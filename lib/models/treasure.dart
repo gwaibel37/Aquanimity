@@ -26,11 +26,11 @@ class Treasure {
     required this.description
   });
 
-  static Treasure generate(int depth, {bool guaranteedHighestInBracket = false}) {
+  static Treasure generate(int depth, {bool guaranteedHighestInBracket = false, double luckBonus = 0.0}) {
     final random = math.Random();
     
     // Your depth-based weight logic (kept intact because it's well-balanced!)
-    final Map<Rarity, double> weights = {
+    final Map<Rarity, double> baseWeights = {
       Rarity.mythic: (depth >= 900) ? 1.0 + (depth / 60) : 0.0,
       Rarity.legendary: (depth >= 600) ? 2.0 + (depth / 60) : 0.0,
       Rarity.epic: (depth >= 350) ? 5.0 + (depth / 50) : 0.0,
@@ -38,6 +38,16 @@ class Treasure {
       Rarity.uncommon: (depth >= 1000) ? 0.0 : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
       Rarity.common: (depth >= 600) ? 0.0 : math.max(5.0, 150.0 - (depth / 5)),
     };
+
+    // Apply luck bonus to higher rarities
+    final Map<Rarity, double> weights = {};
+    for (Rarity r in Rarity.values) {
+      double multiplier = 1.0;
+      if (r == Rarity.rare || r == Rarity.epic || r == Rarity.legendary || r == Rarity.mythic) {
+        multiplier += luckBonus;
+      }
+      weights[r] = (baseWeights[r] ?? 0.0) * multiplier;
+    }
 
     if (guaranteedHighestInBracket) {
       for (Rarity rarity in Rarity.values.toList().reversed) {

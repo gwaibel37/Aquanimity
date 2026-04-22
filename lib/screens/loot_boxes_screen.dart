@@ -72,12 +72,41 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       excludeIds: purchasedIds,
     );
 
-    if (!purchasedIds.contains(reward.id)) {
+    if (reward == null) {
+      // All upgrades purchased, give coins
+      final coinReward = rarity.price;
+      await _dbHelper.updateUserStats({'total_coins': currentCoins + coinReward});
+      setState(() {
+        currentCoins += coinReward;
+      });
+      widget.onCoinsChanged();
+      if (mounted) {
+        setState(() {
+          isOpening = false;
+        });
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      await openingDialog;
+      _showMessage('All upgrades unlocked! Got $coinReward coins instead.', Colors.amber);
+      return;
+    }
+
+    bool isDuplicate = purchasedIds.contains(reward.id);
+    if (!isDuplicate) {
       await _dbHelper.purchaseUpgrade(
         reward.id,
         reward.name,
         reward.category.toString(),
       );
+    } else {
+      final coinReward = rarity.price ~/ 2;
+      await _dbHelper.updateUserStats({'total_coins': currentCoins + coinReward});
+      setState(() {
+        currentCoins += coinReward;
+      });
+      widget.onCoinsChanged();
     }
 
     if (mounted) {
@@ -91,7 +120,7 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       Navigator.of(context).pop();
     }
     await openingDialog;
-    await _showRewardDialog(reward, rarity);
+    await _showRewardDialog(reward, rarity, isDuplicate);
   }
 
   void _showMessage(String message, Color color) {
@@ -128,29 +157,35 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
     );
   }
 
-  Future<void> _showRewardDialog(Upgrade reward, LootBoxRarity rarity) async {
+  Future<void> _showRewardDialog(Upgrade reward, LootBoxRarity rarity, bool isDuplicate) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.blueGrey[900],
-          title: Text('Unlocked from ${rarity.displayName} Box', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(isDuplicate ? 'Duplicate from ${rarity.displayName} Box' : 'Unlocked from ${rarity.displayName} Box', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('You opened a ${rarity.displayName} Loot Box.', style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 12),
-              Text('Unlocked: ${reward.name}', style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+              if (isDuplicate)
+                Text('Duplicate: ${reward.name}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))
+              else
+                Text('Unlocked: ${reward.name}', style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(reward.description, style: const TextStyle(color: Colors.white70)),
+              if (isDuplicate)
+                Text('You already have this upgrade. Got coins instead!', style: const TextStyle(color: Colors.white70))
+              else
+                Text(reward.description, style: const TextStyle(color: Colors.white70)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Nice!', style: TextStyle(color: Colors.cyanAccent)),
+              child: Text(isDuplicate ? 'Okay' : 'Nice!', style: const TextStyle(color: Colors.cyanAccent)),
             ),
           ],
         );
