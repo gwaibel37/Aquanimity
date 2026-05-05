@@ -44,7 +44,7 @@ class UpgradeData {
     },
     {
       'id': 6,
-      'name': 'Sleek Racer', // Woah there speed racer 
+      'name': 'Sleek Racer', // Woah there speed racer
       'description': 'A sleek, aerodynamic submarine built for speed',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.uncommon,
@@ -52,14 +52,16 @@ class UpgradeData {
     {
       'id': 11,
       'name': 'Phantom Walker',
-      'description': 'A silent, advanced cloaking submarine that moves undetected',
+      'description':
+          'A silent, advanced cloaking submarine that moves undetected',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.uncommon,
     },
     {
       'id': 12,
       'name': 'Deep Navigator',
-      'description': 'A robust explorer with advanced sonar and mapping systems',
+      'description':
+          'A robust explorer with advanced sonar and mapping systems',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.uncommon,
     },
@@ -98,14 +100,16 @@ class UpgradeData {
     {
       'id': 13,
       'name': 'Void Stalker',
-      'description': 'A predatory submarine designed for extreme depths and combat',
+      'description':
+          'A predatory submarine designed for extreme depths and combat',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.rare,
     },
     {
       'id': 14,
       'name': 'Titan Explorer',
-      'description': 'A massive, heavily reinforced submarine for the deepest trenches',
+      'description':
+          'A massive, heavily reinforced submarine for the deepest trenches',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.rare,
     },
@@ -120,7 +124,8 @@ class UpgradeData {
     {
       'id': 21,
       'name': 'Lucky Charm +10%',
-      'description': 'Increases chance of finding higher rarity treasures by 10%',
+      'description':
+          'Increases chance of finding higher rarity treasures by 10%',
       'category': UpgradeCategory.perk,
       'minRarity': LootBoxRarity.rare,
       'effect': {'type': 'luckBonus', 'value': 0.10},
@@ -151,14 +156,16 @@ class UpgradeData {
     {
       'id': 15,
       'name': 'Quantum Leap',
-      'description': 'A futuristic submarine with impossible technologies from beyond',
+      'description':
+          'A futuristic submarine with impossible technologies from beyond',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.legendary,
     },
     {
       'id': 16,
       'name': 'Abyss Sovereign',
-      'description': 'The ruler of the deep, an interdimensional submarine of immense power',
+      'description':
+          'The ruler of the deep, an interdimensional submarine of immense power',
       'category': UpgradeCategory.boatStyle,
       'minRarity': LootBoxRarity.legendary,
     },
@@ -173,7 +180,8 @@ class UpgradeData {
     {
       'id': 23,
       'name': 'Lucky Charm +20%',
-      'description': 'Increases chance of finding higher rarity treasures by 20%',
+      'description':
+          'Increases chance of finding higher rarity treasures by 20%',
       'category': UpgradeCategory.perk,
       'minRarity': LootBoxRarity.legendary,
       'effect': {'type': 'luckBonus', 'value': 0.20},
@@ -206,17 +214,22 @@ class UpgradeData {
   static List<Upgrade> getUpgradesByCategory(UpgradeCategory category) {
     return upgrades
         .where((u) => u['category'] == category)
-        .map((u) => Upgrade(
-              id: u['id'],
-              name: u['name'],
-              description: u['description'],
-              category: u['category'],
-              minRarity: u['minRarity'],
-            ))
+        .map(
+          (u) => Upgrade(
+            id: u['id'],
+            name: u['name'],
+            description: u['description'],
+            category: u['category'],
+            minRarity: u['minRarity'],
+          ),
+        )
         .toList();
   }
 
-  static Upgrade? getRandomUpgradeForRarity(LootBoxRarity rarity, {Set<int>? excludeIds}) {
+  static Upgrade? getRandomUpgradeForRarity(
+    LootBoxRarity rarity, {
+    Set<int>? excludeIds,
+  }) {
     final possible = upgrades
         .where((u) => _rarityValue(u['minRarity']) <= _rarityValue(rarity))
         .where((u) => excludeIds == null || !excludeIds.contains(u['id']))

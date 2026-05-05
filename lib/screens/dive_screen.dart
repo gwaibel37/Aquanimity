@@ -24,8 +24,18 @@ class _DiveScreenState extends State<DiveScreen>
   int secondsPassed = 0;
   bool isDiving = false;
   Timer? timer;
+  Timer? _hintTimer;
   String statusMessage = "Pressure Seals: Nominal";
+  String _activeHint = "Stay focused and enjoy the dive.";
   String selectedBoatStyle = 'default';
+
+  final List<String> _diveTips = [
+    'Stay in the app during dives to avoid The Bends.',
+    'Longer dives earn more depth and better treasures.',
+    'Sell duplicate treasures in the vault for extra coins.',
+    'Use the menu buttons to personalize your theme and check your stats.',
+    'Initiate ascent when your dive is complete to save your progress safely.',
+  ];
 
   late AnimationController _radarController;
   late AnimationController _subFloatController;
@@ -63,6 +73,8 @@ class _DiveScreenState extends State<DiveScreen>
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
     _loadSelectedBoatStyle();
+    _selectNewHint();
+    _startHintTimer();
   }
 
   @override
@@ -79,12 +91,29 @@ class _DiveScreenState extends State<DiveScreen>
     _boatAssetsPrecached = true;
   }
 
+  void _selectNewHint() {
+    final hint = _diveTips[math.Random().nextInt(_diveTips.length)];
+    if (mounted) {
+      setState(() {
+        _activeHint = hint;
+      });
+    }
+  }
+
+  void _startHintTimer() {
+    _hintTimer?.cancel();
+    _hintTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _selectNewHint();
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _radarController.dispose();
     _subFloatController.dispose();
     timer?.cancel();
+    _hintTimer?.cancel();
     pdaDismissTimer?.cancel();
     super.dispose();
   }
@@ -140,7 +169,8 @@ class _DiveScreenState extends State<DiveScreen>
     });
   }
 
-  Widget _buildBoatWidget(String style, bool isDiving) {
+  Widget _buildBoatWidget(String style, bool isDiving,
+      {required double width, required double height}) {
     String imagePath;
     switch (style) {
       case 'Sleek Racer':
@@ -178,8 +208,8 @@ class _DiveScreenState extends State<DiveScreen>
     }
 
     Widget boatImage = SizedBox(
-      width: 150,
-      height: 100,
+      width: width,
+      height: height,
       child: Image.asset(
         imagePath,
         fit: BoxFit.contain,
@@ -1264,7 +1294,7 @@ class _DiveScreenState extends State<DiveScreen>
       statusMessage = "DESCENT INITIATED";
       reachedMilestones.clear();
     });
-    const int depthIncrement = 900000; // meters per second
+    const int depthIncrement = 1; // meters per second
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() {
@@ -1417,7 +1447,18 @@ class _DiveScreenState extends State<DiveScreen>
 
   @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
+    final media = MediaQuery.of(context);
+    final double screenWidth = media.size.width;
+    final double screenHeight = media.size.height;
+    final bool isLandscape = screenWidth > screenHeight;
+    final bool isWide = screenWidth > 720;
+    final double boatWidth = (150 + (screenWidth - 360) * 0.16).clamp(150, 320);
+    final double boatHeight = (100 + (screenWidth - 360) * 0.10).clamp(100, 240);
+    final double boatTopOffset = isDiving
+        ? screenHeight
+        : screenHeight * (isLandscape ? 0.22 : 0.15);
+    final double contentMaxWidth = isWide ? 520 : screenWidth * 0.92;
+
     final String targetDisplay = widget.durationMinutes == -1
         ? "ENDLESS"
         : "${widget.durationMinutes * 60}m";
@@ -1452,11 +1493,16 @@ class _DiveScreenState extends State<DiveScreen>
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,
-              top: isDiving ? screenHeight : screenHeight * 0.15,
+              top: boatTopOffset,
               left: 0,
               right: 0,
               child: Center(
-                child: _buildBoatWidget(selectedBoatStyle, isDiving),
+                child: _buildBoatWidget(
+                  selectedBoatStyle,
+                  isDiving,
+                  width: boatWidth,
+                  height: boatHeight,
+                ),
               ),
             ),
 
@@ -1504,78 +1550,91 @@ class _DiveScreenState extends State<DiveScreen>
               ),
 
             Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "$secondsPassed m",
-                      style: TextStyle(
-                        fontSize: 80,
-                        fontWeight: FontWeight.w100,
-                        color: Colors.cyanAccent,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 20,
-                            color: Colors.cyanAccent.withAlpha(128),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "$secondsPassed m",
+                        style: TextStyle(
+                          fontSize: 80,
+                          fontWeight: FontWeight.w100,
+                          color: Colors.cyanAccent,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 20,
+                              color: Colors.cyanAccent.withAlpha(128),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        statusMessage.toUpperCase(),
+                        style: const TextStyle(
+                          letterSpacing: 2,
+                          fontSize: 12,
+                          color: Colors.white54,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "TIP: $_activeHint",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          letterSpacing: 1,
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 60),
+                      if (!isDiving && secondsPassed == 0)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyanAccent[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 15,
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      statusMessage.toUpperCase(),
-                      style: const TextStyle(
-                        letterSpacing: 2,
-                        fontSize: 12,
-                        color: Colors.white54,
-                      ),
-                    ),
-                    const SizedBox(height: 60),
-                    if (!isDiving && secondsPassed == 0)
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyanAccent[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 15,
+                          onPressed: startDive,
+                          child: const Text(
+                            "ENGAGE ENGINES",
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        onPressed: startDive,
-                        child: const Text(
-                          "ENGAGE ENGINES",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    if (isDiving)
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.cyanAccent),
-                          foregroundColor: Colors.cyanAccent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 15,
+                      if (isDiving)
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.cyanAccent),
+                            foregroundColor: Colors.cyanAccent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 15,
+                            ),
+                          ),
+                          onPressed: () => stopDive(),
+                          child: const Text(
+                            "INITIATE ASCENT",
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        onPressed: () => stopDive(),
-                        child: const Text(
-                          "INITIATE ASCENT",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    if (!isDiving)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white70,
+                      if (!isDiving)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back, size: 16),
+                            label: const Text("BACK TO SHIP"),
                           ),
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back, size: 16),
-                          label: const Text("BACK TO SHIP"),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1682,31 +1741,31 @@ class _BubblePainter extends CustomPainter {
   final List<_Bubble> bubbles;
   final double progress;
 
-  _BubblePainter({
-    required this.bubbles,
-    required this.progress,
-  });
+  _BubblePainter({required this.bubbles, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
     // Fade out all bubbles in the last 25% of the animation cycle
-    final cycleEndFade = (progress > 0.75) ? (1.0 - (progress - 0.75) / 0.25) : 1.0;
-    
+    final cycleEndFade = (progress > 0.75)
+        ? (1.0 - (progress - 0.75) / 0.25)
+        : 1.0;
+
     for (final bubble in bubbles) {
       // Calculate position with smooth upward movement (no wrapping)
       final newY = bubble.y - progress * bubble.speed;
-      
+
       // Skip bubbles that are off-screen (above or below)
       if (newY < -0.1 || newY > 1.1) continue;
-      
+
       // Add subtle side-to-side wobble for natural movement
-      final wobbleAmount = math.sin(progress * 3 * math.pi + bubble.wobble * 4 * math.pi) * 0.04;
+      final wobbleAmount =
+          math.sin(progress * 3 * math.pi + bubble.wobble * 4 * math.pi) * 0.04;
       final newX = (bubble.x + wobbleAmount).clamp(0.0, 1.0);
 
       // Create bubble with gradient for depth effect
       final bubbleX = newX * size.width;
       final bubbleY = newY * size.height;
-      
+
       // Fade out as bubble rises to top, and also fade out at cycle end
       final fadeOut = (1.0 - (newY * newY).clamp(0.0, 1.0)) * cycleEndFade;
 

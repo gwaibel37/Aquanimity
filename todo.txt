@@ -1,6 +1,311 @@
- TODO:
- - Every 1000 meters chance for unlocking Creatures - Creatures can be discovered after defeating them, aka keeping focused even 
-   when they are "attacking." Once defeated, they appear in a logbook that shows a image, description, and depth where you find this creature.
-   The creatures only have a chance of attacking in their ranges.
+🚀 COMPLETE AQUANIMITY LAUNCH CHECKLIST
+PRE-LAUNCH (Development Phase)
 
+Code Quality & Testing
+ Run flutter analyze - zero warnings/errors [DONE]
+ Run dart format - consistent code style [DONE]
+ Unit tests for core logic (dive timer, treasure generation, rank calculation) [DONE]
+ Integration tests for critical flows (dive → reward → inventory)
+ Memory leak testing (long dives, rapid app switches)
+ Battery drain analysis (animations, background processes)
+ Storage usage test (100+ treasures stored)
 
+Device & Platform Compatibility
+ Test on Android API 21-24 (legacy support)
+ Test on Android API 25-30 (mid-range)
+ Test on Android API 31+ (modern)
+ Test on multiple screen sizes (4.5" to 6.5")
+ Test on tablet resolutions (10"+ screens)
+ Test portrait & landscape orientation
+ Test with system dark/light mode overrides
+ Test with custom font sizes (accessibility)
+ Test on low-end device (2GB RAM minimum)
+
+Edge Cases & Error Handling
+ Network disconnected mid-dive
+ Low battery mode enabled during dive
+ Storage full scenario
+ Database corruption recovery
+ App force-closed by system during dive
+ Multiple app restarts in quick succession
+ Very long dives (4+ hours)
+ Extremely short dives (1 second)
+ Zero duration / "Endless" mode
+ Rapid treasure redemptions
+ Selling all inventory items
+ Max coin overflow scenario
+
+Permissions & Privacy
+ Verify all requested permissions are justified [DONE]
+ Test behavior when permissions denied [DONE]
+ Test permission re-prompting logic [DONE]
+ Audit data collection (what's stored locally?) [DONE]
+ Verify no data sent to backend (if offline-only) [DONE]
+ Check database encryption approach [DONE]
+ Ensure no sensitive data in logs [DONE]
+ Test user data deletion/reset [DONE]
+
+Onboarding & User Education
+ Tutorial screen (what is "The Bends"?) [DONE]
+ First-run experience (introduce features) [DONE]
+ Help/FAQ screen in-app [DONE]
+ Explanation of rank system [DONE]
+ Explanation of treasure rarities [DONE]
+ Controls/gestures tutorial [DONE]
+ Tips/hints system during dives [DONE]
+
+Creature System (Deferred)
+ Creature spawn logic (every 1000m) [DEFERRED]
+ Attack animation/sequence [DEFERRED]
+ Player defeat mechanism (staying focused) [DEFERRED]
+ Creature logbook implementation [DEFERRED]
+ Creature image assets finalized [DEFERRED]
+ Creature descriptions written [DEFERRED]
+ Difficulty scaling with depth [DEFERRED]
+ Creature uniqueness (no duplicates at same depth) [DEFERRED]
+ Creature defeat sound/feedback [DEFERRED]
+ Rewards for defeating creatures [DEFERRED]
+
+App Lifecycle & Foreground Detection
+ Locks app when minimized (not just app switch)
+ Handles Picture-in-Picture mode
+ Prevents notification center exploits
+ Detects screen lock
+ Handles split-screen mode
+ Handles interruptions (calls, messages)
+ Restores state correctly after suspension
+ Works with "Don't Keep Activities" enabled
+
+UI/UX Polish
+ All text fits on small screens (no overflow)
+ No placeholder text left in code
+ Button states visible (pressed, disabled)
+ Loading states shown
+ Empty states handled (no treasures, no upgrades)
+ Error messages are user-friendly
+ No jarring transitions
+ Animations smooth on all devices
+ Fonts readable (min 12sp)
+ Touch targets minimum 48dp
+
+Performance Optimization
+ App startup time < 3 seconds
+ Dive screen loads < 1 second
+ Treasure generation < 500ms
+ No frame drops during animations
+ Database queries optimized (indexed)
+ Image assets compressed
+ Memory usage stable over 30 mins
+ CPU usage reasonable (not maxed)
+
+Legal & Compliance Documents
+ Privacy Policy (stored in-app or linked) [DONE]
+ Terms of Service (clear app usage rules) [DONE]
+ COPPA compliance check (if targeting under-13)
+ GDPR compliance (if targeting EU users)
+ Content rating questionnaire answers
+ Age appropriateness verified
+ License attribution for open-source libs
+ Permissions disclosure statement
+
+Play Store Specifics
+ App signed with release key (not debug)
+ Version code incremented (e.g., 1)
+ Version name set (e.g., 0.1.0-beta.1)
+ App ID/package name finalized
+ App bundle (AAB) built & tested
+ APK works standalone (if building APK)
+ Minimum SDK set to 21
+ Target SDK set to 34+
+ No hardcoded API keys/secrets
+
+Asset Preparation
+ App icon (512x512 PNG, no rounded corners)
+ Play Store banner (1024x500)
+ 2-5 feature screenshots (1080x1920 or 1440x2560)
+ Short description (80 characters)
+ Full description (4000 characters max)
+ All creature images finalized [DEFERRED]
+ Boat sprite assets optimized
+ Background images compressed
+
+BETA TESTING PHASE
+Internal Testing (Week 1)
+ Test on 3-5 devices (different Android versions)
+ Complete 5+ full dives (various lengths)
+ Trigger "The Bends" 10+ times (validate feedback)
+ Unlock all treasure rarities
+ Test all themes & boat skins
+ Defeat creatures at different depths
+ Hit max rank tier
+ Fill inventory (100+ items)
+ Test swipe-to-sell flow
+ Purchase loot boxes
+ Sell treasures for coins
+ Check database for corruption
+
+Google Play Testing Tracks
+ Create Closed Testing group (5-20 testers)
+ Create Open Testing track (100+ testers)
+ Enable user feedback collection
+ Monitor crash reports daily
+ Check ANR (Application Not Responding) rate
+ Monitor review/rating frequency
+ Collect explicit user feedback via form
+
+Device Coverage
+ Samsung Galaxy (various versions)
+ Google Pixel
+ OnePlus
+ Xiaomi/Redmi
+ Low-end device (older 2GB RAM)
+ Mid-range device
+ High-end device
+ Tablets (if applicable)
+
+Stress Testing
+ 2-hour continuous dive
+ 50+ consecutive dives in succession
+ Rapid app minimize/restore cycles
+ Database with 500+ treasures
+ All themes loaded simultaneously
+ Low battery mode (< 15%)
+ Low storage (< 100MB free)
+ Airplane mode toggle during dive
+
+User Feedback Collection
+ What confused you?
+ What felt unfair?
+ What felt rewarding?
+ Would you recommend this app?
+ Did you encounter bugs?
+ Feature requests?
+ Difficulty feedback
+ Tutorial clarity feedback
+
+Crash & Performance Monitoring
+ Zero critical crashes (target: 0)
+ ANR rate < 0.5%
+ 99%ile startup time < 5 seconds
+ Average session duration tracked
+ Retention rate tracked (Day 1, Day 7)
+ Engagement metrics (avg dives/day)
+ Memory heap size normal
+ Frame rate smooth (60fps target)
+
+Creature System Validation (Deferred)
+ Creatures appear at correct depths [DEFERRED]
+ Attack sequences are challenging but fair [DEFERRED]
+ Victory is achievable for average player [DEFERRED]
+ Defeat mechanics clear [DEFERRED]
+ Logbook displays correctly [DEFERRED]
+ No creature spawning bugs [DEFERRED]
+ Variety is engaging [DEFERRED]
+ Difficulty scales appropriately [DEFERRED]
+
+Background Detection Validation
+ Lock screen stops dive correctly
+ Notification center doesn't cheat
+ Picture-in-Picture blocks dive
+ Multitask view blocks dive
+ Phone calls block dive
+ SMS notifications block dive
+ Incoming alerts block dive
+ Screen timeout blocks dive
+
+POST-BETA (Polish & Preparation for Production)
+Bug Fixes & Stability
+ All critical bugs fixed
+ All high-priority bugs fixed
+ Medium-priority bugs triaged (fix or defer)
+ Low-priority bugs documented for v1.1
+ Crashes fixed to < 0.1% rate
+ ANRs eliminated
+ Database stability verified
+ State restoration verified
+
+Beta Feedback Implementation
+ Tutorial clarity improved if needed
+ Difficulty adjusted based on feedback
+ Confusing UI elements redesigned
+ High-demand features fast-tracked (if quick)
+ Common questions addressed in FAQ
+ Known issues documented in release notes
+ Edge cases exposed by testers fixed
+
+Release Preparation
+ Bump version to 1.0.0
+ Write comprehensive changelog
+ Finalize release notes (for Play Store)
+ Remove all beta labels
+ Set launch date
+ Finalize Play Store listing
+ Screenshot captions finalized
+ Promo text finalized
+
+Documentation & Support
+ FAQ page complete
+ Help section in-app
+ Known issues list published
+ Support email set up
+ Response template for reviews created
+ Bug report form/email published
+ Feature request channel established
+
+Marketing & Launch
+ Press release drafted
+ Social media accounts ready (if applicable)
+ Beta tester testimonials collected
+ App Store listing live (scheduled)
+ Announcement ready
+ Early access key ready (for influencers if needed)
+
+Analytics & Monitoring Setup
+ Firebase Crashlytics configured
+ Google Analytics enabled
+ Custom event tracking added (dive completion, treasure unlock, etc.)
+ Conversion funnels defined
+ Retention dashboards set up
+ Revenue tracking (if monetizing)
+ Alerts configured for crashes > 1%
+
+Post-Launch Readiness
+ 24/7 crash monitoring enabled
+ Daily review monitoring
+ Weekly feedback review meeting scheduled
+ Hotfix deployment process documented
+ Update rollout strategy defined
+ A/B testing framework ready (if planned)
+ User feedback loop formalized
+
+Version 1.1 Planning
+ High-demand features documented
+ Nice-to-have features backlogged
+ Performance improvements identified
+ New creature designs sketched (if planned) [DEFERRED]
+ Seasonal events brainstormed
+ 2-3 month roadmap created
+
+ONGOING (Post-Launch Operations)
+Monthly Checklist
+ Review crash reports & fix regressions
+ Read user reviews & implement feedback
+ Monitor engagement metrics
+ Check for outdated dependencies
+ Performance regression testing
+ Update Play Store listing if needed
+
+Quarterly Checklist
+ Major feature release (v1.1, v1.2, etc.)
+ Update dependencies
+ Increase target SDK if required by Play Store
+ Review security vulnerabilities
+ User retention analysis
+ Feature usage analytics
+ 
+Annually Checklist
+ Comprehensive security audit
+ Accessibility compliance review (WCAG 2.1+)
+ Major architectural improvements
+ Performance optimization pass
+ Update Privacy Policy if data practices changed

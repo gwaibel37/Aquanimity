@@ -21,21 +21,27 @@ class Treasure {
   final String description; // New field for the flavor text
 
   Treasure({
-    required this.name, 
-    required this.rarity, 
-    required this.description
+    required this.name,
+    required this.rarity,
+    required this.description,
   });
 
-  static Treasure generate(int depth, {bool guaranteedHighestInBracket = false, double luckBonus = 0.0}) {
+  static Treasure generate(
+    int depth, {
+    bool guaranteedHighestInBracket = false,
+    double luckBonus = 0.0,
+  }) {
     final random = math.Random();
-    
+
     // Your depth-based weight logic (kept intact because it's well-balanced!)
     final Map<Rarity, double> baseWeights = {
       Rarity.mythic: (depth >= 900) ? 1.0 + (depth / 60) : 0.0,
       Rarity.legendary: (depth >= 600) ? 2.0 + (depth / 60) : 0.0,
       Rarity.epic: (depth >= 350) ? 5.0 + (depth / 50) : 0.0,
       Rarity.rare: (depth >= 1200) ? 0.0 : 10.0 + (depth / 40),
-      Rarity.uncommon: (depth >= 1000) ? 0.0 : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
+      Rarity.uncommon: (depth >= 1000)
+          ? 0.0
+          : math.max(10.0, 40.0 + (depth / 20) - (depth / 15)),
       Rarity.common: (depth >= 600) ? 0.0 : math.max(5.0, 150.0 - (depth / 5)),
     };
 
@@ -43,7 +49,10 @@ class Treasure {
     final Map<Rarity, double> weights = {};
     for (Rarity r in Rarity.values) {
       double multiplier = 1.0;
-      if (r == Rarity.rare || r == Rarity.epic || r == Rarity.legendary || r == Rarity.mythic) {
+      if (r == Rarity.rare ||
+          r == Rarity.epic ||
+          r == Rarity.legendary ||
+          r == Rarity.mythic) {
         multiplier += luckBonus;
       }
       weights[r] = (baseWeights[r] ?? 0.0) * multiplier;
@@ -67,7 +76,7 @@ class Treasure {
         return _createTreasureFromPool(r);
       }
     }
-    
+
     // Hard fallback just in case the abyss stares back too hard
     return _createTreasureFromPool(Rarity.common);
   }
@@ -75,23 +84,21 @@ class Treasure {
   static Treasure _createTreasureFromPool(Rarity rarity) {
     final random = math.Random();
     // Accessing the new Map structure: TreasureData.treasurePool[rarity]
-    final pool = TreasureData.treasurePool[rarity] ?? {"Mystery Object": "A strange glitch in the sonar."};
-    
+    final pool =
+        TreasureData.treasurePool[rarity] ??
+        {"Mystery Object": "A strange glitch in the sonar."};
+
     // Pick a random key (the name)
     String name = pool.keys.elementAt(random.nextInt(pool.length));
     // Get the corresponding value (the description)
     String description = pool[name]!;
 
-    return Treasure(
-      name: name,
-      rarity: rarity,
-      description: description,
-    );
+    return Treasure(name: name, rarity: rarity, description: description);
   }
 
   // Converts the object to a Map for JSON encoding
   Map<String, dynamic> toMap() => {
-    'name': name, 
+    'name': name,
     'rarity': rarity.name,
     'description': description,
   };
@@ -100,7 +107,10 @@ class Treasure {
   factory Treasure.fromMap(Map<String, dynamic> map) {
     return Treasure(
       name: map['name'] ?? "Unknown",
-      rarity: Rarity.values.firstWhere((e) => e.name == map['rarity'], orElse: () => Rarity.common),
+      rarity: Rarity.values.firstWhere(
+        (e) => e.name == map['rarity'],
+        orElse: () => Rarity.common,
+      ),
       description: map['description'] ?? "No description available.",
     );
   }

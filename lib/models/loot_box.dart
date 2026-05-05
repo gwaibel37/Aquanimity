@@ -1,9 +1,4 @@
-enum LootBoxRarity {
-  common,
-  uncommon,
-  rare,
-  legendary,
-}
+enum LootBoxRarity { common, uncommon, rare, legendary }
 
 extension LootBoxRarityExt on LootBoxRarity {
   String get displayName {
@@ -38,20 +33,12 @@ class LootBox {
   final LootBoxRarity rarity;
   final int quantity;
 
-  LootBox({
-    required this.id,
-    required this.rarity,
-    this.quantity = 1,
-  });
+  LootBox({required this.id, required this.rarity, this.quantity = 1});
 
   int get totalPrice => rarity.price * quantity;
 }
 
-enum UpgradeCategory {
-  theme,
-  boatStyle,
-  perk,
-}
+enum UpgradeCategory { theme, boatStyle, perk }
 
 class Upgrade {
   final int id;

@@ -5,10 +5,15 @@ import '../data/database_helper.dart';
 // --- CUSTOM EMBLEM PAINTER ---
 class RankEmblem extends StatelessWidget {
   final Color color;
-  final String tier; 
+  final String tier;
   final double size;
 
-  const RankEmblem({super.key, required this.color, required this.tier, this.size = 50});
+  const RankEmblem({
+    super.key,
+    required this.color,
+    required this.tier,
+    this.size = 50,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +34,9 @@ class BannerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
     final borderPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
@@ -39,7 +46,7 @@ class BannerPainter extends CustomPainter {
     path.moveTo(size.width * 0.1, 0);
     path.lineTo(size.width * 0.9, 0);
     path.lineTo(size.width * 0.9, size.height * 0.75);
-    path.lineTo(size.width * 0.5, size.height); 
+    path.lineTo(size.width * 0.5, size.height);
     path.lineTo(size.width * 0.1, size.height * 0.75);
     path.close();
 
@@ -60,7 +67,13 @@ class BannerPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
     tp.layout();
-    tp.paint(canvas, Offset((size.width - tp.width) / 2, (size.height * 0.4) - (tp.height / 2)));
+    tp.paint(
+      canvas,
+      Offset(
+        (size.width - tp.width) / 2,
+        (size.height * 0.4) - (tp.height / 2),
+      ),
+    );
   }
 
   @override
@@ -102,7 +115,10 @@ class RankSystem {
     RankTier("COPPER", "IV", Color(0xFFEF5350), 0),
   ];
 
-  static RankTier getRank(int meters) => levels.firstWhere((r) => meters >= r.minMeters, orElse: () => levels.last);
+  static RankTier getRank(int meters) => levels.firstWhere(
+    (r) => meters >= r.minMeters,
+    orElse: () => levels.last,
+  );
 }
 
 class StatsScreen extends StatefulWidget {
@@ -112,7 +128,11 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  int success = 0, forfeit = 0, totalDepth = 0, currentStreak = 0, weeklyMeters = 0;
+  int success = 0,
+      forfeit = 0,
+      totalDepth = 0,
+      currentStreak = 0,
+      weeklyMeters = 0;
   List<String> rankHistory = [];
 
   @override
@@ -125,7 +145,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final dbHelper = DatabaseHelper();
     final userStats = await dbHelper.getUserStats();
     final diveHistory = await dbHelper.getDiveHistory(includeArchived: true);
-    
+
     // Convert dive history back to the string format expected by the UI
     List<String> historyStrings = diveHistory.map((entry) {
       String date = entry['date'];
@@ -133,7 +153,7 @@ class _StatsScreenState extends State<StatsScreen> {
       String rank = entry['rank'];
       return "$date | ${depth}m | $rank";
     }).toList();
-    
+
     setState(() {
       success = userStats['successful_dives'] ?? 0;
       forfeit = userStats['forfeit_dives'] ?? 0;
@@ -148,7 +168,9 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     final currentRank = RankSystem.getRank(weeklyMeters);
     final RankTier? bestRank = _resolveBestRank(currentRank);
-    final String bestRankLabel = bestRank != null ? "${bestRank.category} ${bestRank.subTier}" : "N/A";
+    final String bestRankLabel = bestRank != null
+        ? "${bestRank.category} ${bestRank.subTier}"
+        : "N/A";
     final Color bestRankColor = bestRank?.color ?? Colors.indigoAccent;
 
     return Scaffold(
@@ -168,19 +190,49 @@ class _StatsScreenState extends State<StatsScreen> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: _buildStatCard("TOTAL DEPTH", "$totalDepth m", Colors.cyanAccent)),
-                          Expanded(child: _buildStatCard("BEST RANK", bestRankLabel, bestRankColor)),
+                          Expanded(
+                            child: _buildStatCard(
+                              "TOTAL DEPTH",
+                              "$totalDepth m",
+                              Colors.cyanAccent,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildStatCard(
+                              "BEST RANK",
+                              bestRankLabel,
+                              bestRankColor,
+                            ),
+                          ),
                         ],
                       ),
                       Row(
                         children: [
-                          Expanded(child: _buildStatCard("SUCCESSFUL", "$success", Colors.greenAccent)),
-                          Expanded(child: _buildStatCard("BREACHES", "$forfeit", Colors.redAccent)),
+                          Expanded(
+                            child: _buildStatCard(
+                              "SUCCESSFUL",
+                              "$success",
+                              Colors.greenAccent,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildStatCard(
+                              "BREACHES",
+                              "$forfeit",
+                              Colors.redAccent,
+                            ),
+                          ),
                         ],
                       ),
                       Row(
                         children: [
-                          Expanded(child: _buildStatCard("STREAK", "$currentStreak DAYS", Colors.orangeAccent)),
+                          Expanded(
+                            child: _buildStatCard(
+                              "STREAK",
+                              "$currentStreak DAYS",
+                              Colors.orangeAccent,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 30),
@@ -213,8 +265,22 @@ class _StatsScreenState extends State<StatsScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("WEEKLY STATUS", style: TextStyle(fontSize: 10, letterSpacing: 2, color: Colors.white54)),
-              Text("${rank.category} ${rank.subTier}", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: rank.color)),
+              const Text(
+                "WEEKLY STATUS",
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  color: Colors.white54,
+                ),
+              ),
+              Text(
+                "${rank.category} ${rank.subTier}",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: rank.color,
+                ),
+              ),
             ],
           ),
         ],
@@ -224,8 +290,14 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildRankProgressBar(int meters, RankTier current) {
     int currentIndex = RankSystem.levels.indexOf(current);
-    RankTier nextRank = currentIndex > 0 ? RankSystem.levels[currentIndex - 1] : current;
-    double progress = currentIndex > 0 ? ((meters - current.minMeters) / (nextRank.minMeters - current.minMeters)).clamp(0.0, 1.0) : 1.0;
+    RankTier nextRank = currentIndex > 0
+        ? RankSystem.levels[currentIndex - 1]
+        : current;
+    double progress = currentIndex > 0
+        ? ((meters - current.minMeters) /
+                  (nextRank.minMeters - current.minMeters))
+              .clamp(0.0, 1.0)
+        : 1.0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -234,14 +306,29 @@ class _StatsScreenState extends State<StatsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("${current.category} ${current.subTier}", style: TextStyle(color: current.color, fontSize: 11, fontWeight: FontWeight.bold)),
-              Text("${nextRank.category} ${nextRank.subTier}", style: const TextStyle(color: Colors.white24, fontSize: 11)),
+              Text(
+                "${current.category} ${current.subTier}",
+                style: TextStyle(
+                  color: current.color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                "${nextRank.category} ${nextRank.subTier}",
+                style: const TextStyle(color: Colors.white24, fontSize: 11),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(value: progress, backgroundColor: Colors.white.withValues(alpha: 0.05), color: current.color, minHeight: 8),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              color: current.color,
+              minHeight: 8,
+            ),
           ),
         ],
       ),
@@ -250,7 +337,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildStatCard(String label, String value, Color color) {
     return Container(
-      height: 95, 
+      height: 95,
       padding: const EdgeInsets.all(10),
       margin: const EdgeInsets.all(5),
       decoration: BoxDecoration(
@@ -261,9 +348,26 @@ class _StatsScreenState extends State<StatsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
           const SizedBox(height: 6),
-          FittedBox(child: Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'monospace'))),
+          FittedBox(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -292,7 +396,9 @@ class _StatsScreenState extends State<StatsScreen> {
       final RankTier? historyRank = _rankTierFromLabel(rankLabel);
       if (historyRank == null) continue;
 
-      if (best == null || RankSystem.levels.indexOf(historyRank) < RankSystem.levels.indexOf(best)) {
+      if (best == null ||
+          RankSystem.levels.indexOf(historyRank) <
+              RankSystem.levels.indexOf(best)) {
         best = historyRank;
       }
     }
@@ -303,10 +409,27 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget _buildHistoryList() {
     return Column(
       children: [
-        const Align(alignment: Alignment.centerLeft, child: Text("PAST OPERATIONS", style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.bold))),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            "PAST OPERATIONS",
+            style: TextStyle(
+              color: Colors.white24,
+              fontSize: 11,
+              letterSpacing: 2,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
         const Divider(color: Colors.white10),
         if (rankHistory.isEmpty)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 30), child: Text("NO DATA ARCHIVED", style: TextStyle(color: Colors.white10)))
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 30),
+            child: Text(
+              "NO DATA ARCHIVED",
+              style: TextStyle(color: Colors.white10),
+            ),
+          )
         else
           ListView.builder(
             shrinkWrap: true,
@@ -315,7 +438,7 @@ class _StatsScreenState extends State<StatsScreen> {
             itemBuilder: (context, index) {
               final String entry = rankHistory[rankHistory.length - 1 - index];
               final parts = entry.split('|');
-              
+
               // Safe parsing for old data
               String date = parts[0];
               String depth = parts.length > 1 ? parts[1] : "--";
@@ -323,11 +446,30 @@ class _StatsScreenState extends State<StatsScreen> {
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: ListTile(
-                  title: Text(rankLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white70)),
-                  subtitle: Text(date, style: const TextStyle(fontSize: 10, color: Colors.white38)),
-                  trailing: Text(depth, style: const TextStyle(fontFamily: 'monospace', color: Colors.white70)),
+                  title: Text(
+                    rankLabel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  subtitle: Text(
+                    date,
+                    style: const TextStyle(fontSize: 10, color: Colors.white38),
+                  ),
+                  trailing: Text(
+                    depth,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      color: Colors.white70,
+                    ),
+                  ),
                 ),
               );
             },
@@ -340,9 +482,12 @@ class _StatsScreenState extends State<StatsScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: TextButton.icon(
-        onPressed: () => Navigator.pop(context), 
-        icon: const Icon(Icons.arrow_back, color: Colors.white60, size: 18), 
-        label: const Text("BACK TO SHIP", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold))
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back, color: Colors.white60, size: 18),
+        label: const Text(
+          "BACK TO SHIP",
+          style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

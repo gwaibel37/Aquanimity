@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'io_support.dart' if (dart.library.io) 'dart:io' as io;
 
 class PDANotification extends StatelessWidget {
   final String message;
@@ -110,9 +110,10 @@ class _AbyssalBackgroundState extends State<AbyssalBackground> {
           _backgroundImage = null;
           _hasBackgroundImage = false;
         }
-      } else if (!kIsWeb && File(path).existsSync()) {
+      } else if (!kIsWeb && io.File(path).existsSync()) {
         // Handle file path on mobile
-        _backgroundImage = FileImage(File(path));
+        final dynamic localFile = io.File(path);
+        _backgroundImage = FileImage(localFile);
         _hasBackgroundImage = true;
       } else {
         _backgroundImage = null;

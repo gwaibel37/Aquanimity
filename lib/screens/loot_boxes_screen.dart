@@ -55,7 +55,6 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       isOpening = true;
     });
 
-    // Update coins in database
     final dbHelper = DatabaseHelper();
     await dbHelper.updateUserStats({'total_coins': currentCoins});
     widget.onCoinsChanged();
@@ -73,9 +72,10 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
     );
 
     if (reward == null) {
-      // All upgrades purchased, give coins
       final coinReward = rarity.price;
-      await _dbHelper.updateUserStats({'total_coins': currentCoins + coinReward});
+      await _dbHelper.updateUserStats({
+        'total_coins': currentCoins + coinReward,
+      });
       setState(() {
         currentCoins += coinReward;
       });
@@ -89,7 +89,10 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
         Navigator.of(context).pop();
       }
       await openingDialog;
-      _showMessage('All upgrades unlocked! Got $coinReward coins instead.', Colors.amber);
+      _showMessage(
+        'All upgrades unlocked! Got $coinReward coins instead.',
+        Colors.amber,
+      );
       return;
     }
 
@@ -102,7 +105,9 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       );
     } else {
       final coinReward = rarity.price ~/ 2;
-      await _dbHelper.updateUserStats({'total_coins': currentCoins + coinReward});
+      await _dbHelper.updateUserStats({
+        'total_coins': currentCoins + coinReward,
+      });
       setState(() {
         currentCoins += coinReward;
       });
@@ -140,7 +145,13 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.blueGrey[900],
-          title: Text('Opening ${rarity.displayName} Loot Box', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(
+            'Opening ${rarity.displayName} Loot Box',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: SizedBox(
             height: 100,
             child: Column(
@@ -148,7 +159,11 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
               children: const [
                 CircularProgressIndicator(color: Colors.cyanAccent),
                 SizedBox(height: 20),
-                Text('Preparing your reward...', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+                Text(
+                  'Preparing your reward...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -157,35 +172,71 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
     );
   }
 
-  Future<void> _showRewardDialog(Upgrade reward, LootBoxRarity rarity, bool isDuplicate) async {
+  Future<void> _showRewardDialog(
+    Upgrade reward,
+    LootBoxRarity rarity,
+    bool isDuplicate,
+  ) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.blueGrey[900],
-          title: Text(isDuplicate ? 'Duplicate from ${rarity.displayName} Box' : 'Unlocked from ${rarity.displayName} Box', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(
+            isDuplicate
+                ? 'Duplicate from ${rarity.displayName} Box'
+                : 'Unlocked from ${rarity.displayName} Box',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('You opened a ${rarity.displayName} Loot Box.', style: const TextStyle(color: Colors.white70)),
+              Text(
+                'You opened a ${rarity.displayName} Loot Box.',
+                style: const TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 12),
               if (isDuplicate)
-                Text('Duplicate: ${reward.name}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))
+                Text(
+                  'Duplicate: ${reward.name}',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
               else
-                Text('Unlocked: ${reward.name}', style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+                Text(
+                  'Unlocked: ${reward.name}',
+                  style: const TextStyle(
+                    color: Colors.cyanAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               const SizedBox(height: 8),
               if (isDuplicate)
-                Text('You already have this upgrade. Got coins instead!', style: const TextStyle(color: Colors.white70))
+                Text(
+                  'You already have this upgrade. Got coins instead!',
+                  style: const TextStyle(color: Colors.white70),
+                )
               else
-                Text(reward.description, style: const TextStyle(color: Colors.white70)),
+                Text(
+                  reward.description,
+                  style: const TextStyle(color: Colors.white70),
+                ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(isDuplicate ? 'Okay' : 'Nice!', style: const TextStyle(color: Colors.cyanAccent)),
+              child: Text(
+                isDuplicate ? 'Okay' : 'Nice!',
+                style: const TextStyle(color: Colors.cyanAccent),
+              ),
             ),
           ],
         );
@@ -205,7 +256,8 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      const SizedBox(height: 20),
+                      // Back button Row and initial SizedBox removed
+                      const SizedBox(height: 10),
                       Text(
                         'LOOT BOXES',
                         style: const TextStyle(
@@ -217,16 +269,25 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
                       ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
+                            const Icon(
+                              Icons.monetization_on,
+                              color: Colors.amber,
+                              size: 24,
+                            ),
                             const SizedBox(width: 10),
                             Text(
                               '$currentCoins',
@@ -266,8 +327,7 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        for (final rarity in LootBoxRarity.values)
-          _buildLootBoxCard(rarity),
+        for (final rarity in LootBoxRarity.values) _buildLootBoxCard(rarity),
       ],
     );
   }
@@ -316,7 +376,11 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.monetization_on, size: 16, color: Colors.amber),
+                const Icon(
+                  Icons.monetization_on,
+                  size: 16,
+                  color: Colors.amber,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   '${rarity.price}',
@@ -332,10 +396,7 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
               const SizedBox(height: 8),
               Text(
                 'Not enough',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.red[300],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.red[300]),
               ),
             ],
           ],
@@ -350,11 +411,7 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 60),
-          Icon(
-            Icons.card_giftcard,
-            size: 120,
-            color: Colors.cyanAccent,
-          ),
+          Icon(Icons.card_giftcard, size: 120, color: Colors.cyanAccent),
           const SizedBox(height: 40),
           const Text(
             'Opening...',
@@ -390,8 +447,9 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: _getRarityColor(openedUpgrade!.minRarity)
-                      .withValues(alpha: 0.3),
+                  color: _getRarityColor(
+                    openedUpgrade!.minRarity,
+                  ).withValues(alpha: 0.3),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
@@ -430,10 +488,7 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
                 const SizedBox(height: 12),
                 Text(
                   openedUpgrade!.description,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -460,23 +515,6 @@ class _LootBoxesScreenState extends State<LootBoxesScreen> {
             ),
           ),
           const SizedBox(height: 60),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.cyanAccent[700],
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-            ),
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, size: 16),
-            label: const Text(
-              'BACK',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );

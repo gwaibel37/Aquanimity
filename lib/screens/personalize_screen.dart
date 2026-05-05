@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import '../widgets/io_support.dart' if (dart.library.io) 'dart:io' as io;
 import '../models/loot_box.dart';
 import '../data/database_helper.dart';
 import '../data/upgrade_data.dart';
-import '../widgets/shared_widgets.dart';
 
 class PersonalizeScreen extends StatefulWidget {
   final ValueChanged<String> onThemeChanged;
@@ -36,7 +35,8 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
     final stats = await _dbHelper.getUserStats();
     setState(() {
       selectedTheme = stats['selected_theme'] as String? ?? 'default';
-      selectedBoatStyle = (stats['selected_boat_style'] as String?) ?? 'Classic Sub';
+      selectedBoatStyle =
+          (stats['selected_boat_style'] as String?) ?? 'Classic Sub';
       if (selectedBoatStyle == 'default') selectedBoatStyle = 'Classic Sub';
     });
   }
@@ -60,7 +60,7 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
 
     if (image != null) {
       if (!mounted) return;
-      
+
       // Show loading dialog
       showDialog(
         context: context,
@@ -139,16 +139,21 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
         // Save the image to app storage using a fresh filename so Flutter reloads it
         String? imageData;
         if (!kIsWeb) {
-          final Directory appDir = await getApplicationDocumentsDirectory();
-          final String imagePath = '${appDir.path}/custom_theme_background_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          await File(image.path).copy(imagePath);
+          final dynamic appDir = await getApplicationDocumentsDirectory();
+          final String imagePath =
+              '${appDir.path}/custom_theme_background_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await io.File(image.path).copy(imagePath);
           imageData = imagePath;
         } else {
           // On web, compress and store as base64
           // Resize image to reduce size (max 800x600)
-          var decodedResized = img.copyResize(decodedImage, width: 800, height: 600);
+          var decodedResized = img.copyResize(
+            decodedImage,
+            width: 800,
+            height: 600,
+          );
           List<int> resizedBytes = img.encodeJpg(decodedResized, quality: 85);
-          
+
           String mimeType = 'image/jpeg';
           imageData = 'data:$mimeType;base64,${base64Encode(resizedBytes)}';
         }
@@ -202,63 +207,36 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          AbyssalBackground(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-                      Text(
-                        'PERSONALIZE',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 4,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      _buildCategorySection(
-                        'THEMES',
-                        UpgradeCategory.theme,
-                        Icons.palette,
-                      ),
-                      const SizedBox(height: 40),
-                      _buildCategorySection(
-                        'BOAT STYLES',
-                        UpgradeCategory.boatStyle,
-                        Icons.directions_boat,
-                      ),
-                      const SizedBox(height: 40),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.secondary,
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back, size: 16),
-                        label: const Text(
-                          'BACK',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              'PERSONALIZE',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 30),
+            _buildCategorySection(
+              'THEMES',
+              UpgradeCategory.theme,
+              Icons.palette,
+            ),
+            const SizedBox(height: 40),
+            _buildCategorySection(
+              'BOAT STYLES',
+              UpgradeCategory.boatStyle,
+              Icons.directions_boat,
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
@@ -306,13 +284,12 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
               itemCount: upgrades.length,
               itemBuilder: (context, index) {
                 final upgrade = upgrades[index];
-                final isPurchased = upgrade.id == 1 || upgrade.id == 5 || purchasedIds.contains(upgrade.id);
+                final isPurchased =
+                    upgrade.id == 1 ||
+                    upgrade.id == 5 ||
+                    purchasedIds.contains(upgrade.id);
 
-                return _buildUpgradeCard(
-                  upgrade,
-                  isPurchased,
-                  category,
-                );
+                return _buildUpgradeCard(upgrade, isPurchased, category);
               },
             );
           },
@@ -327,8 +304,8 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
     UpgradeCategory category,
   ) {
     final color = _getRarityColor(upgrade.minRarity);
-    final isSelected = (category == UpgradeCategory.theme &&
-            selectedTheme == upgrade.name) ||
+    final isSelected =
+        (category == UpgradeCategory.theme && selectedTheme == upgrade.name) ||
         (category == UpgradeCategory.boatStyle &&
             selectedBoatStyle == upgrade.name);
 
@@ -423,8 +400,10 @@ class _PersonalizeScreenState extends State<PersonalizeScreen> {
                               }
                             });
                             await _dbHelper.updateUserStats({
-                              if (category == UpgradeCategory.theme) 'selected_theme': upgrade.name,
-                              if (category == UpgradeCategory.boatStyle) 'selected_boat_style': upgrade.name,
+                              if (category == UpgradeCategory.theme)
+                                'selected_theme': upgrade.name,
+                              if (category == UpgradeCategory.boatStyle)
+                                'selected_boat_style': upgrade.name,
                             });
                             if (category == UpgradeCategory.theme) {
                               widget.onThemeChanged(upgrade.name);
