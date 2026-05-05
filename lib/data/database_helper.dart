@@ -36,7 +36,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'aquaminity.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -54,7 +54,14 @@ class DatabaseHelper {
         last_weekly_reset TEXT,
         last_dive_date TEXT,
         successful_dives INTEGER DEFAULT 0,
-        forfeit_dives INTEGER DEFAULT 0
+        forfeit_dives INTEGER DEFAULT 0,
+        selected_theme TEXT DEFAULT 'Deep Sea Theme',
+        selected_boat_style TEXT DEFAULT 'Classic Sub',
+        custom_theme_primary INTEGER,
+        custom_theme_accent INTEGER,
+        custom_theme_background INTEGER,
+        custom_theme_surface INTEGER,
+        custom_background_image TEXT
       )
     ''');
 
@@ -80,19 +87,115 @@ class DatabaseHelper {
       )
     ''');
 
+    // Purchased upgrades table
+    await db.execute('''
+      CREATE TABLE purchased_upgrades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        upgrade_id INTEGER NOT NULL,
+        upgrade_name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        purchased_date TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
     // Insert default user stats
-    await db.insert('user_stats', {'id': 1});
+    await db.insert('user_stats', {
+      'id': 1,
+      'selected_theme': 'Deep Sea Theme',
+      'selected_boat_style': 'Classic Sub',
+    });
+
+    // Insert default purchased upgrades (Deep Sea Theme and Classic Sub)
+    await db.insert('purchased_upgrades', {
+      'upgrade_id': 1,
+      'upgrade_name': 'Deep Sea Theme',
+      'category': 'UpgradeCategory.theme',
+    });
+    await db.insert('purchased_upgrades', {
+      'upgrade_id': 5,
+      'upgrade_name': 'Classic Sub',
+      'category': 'UpgradeCategory.boatStyle',
+    });
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database upgrades here if needed
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchased_upgrades (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          upgrade_id INTEGER NOT NULL,
+          upgrade_name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          purchased_date TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE user_stats ADD COLUMN selected_theme TEXT DEFAULT "default"',
+      );
+      await db.execute(
+        'ALTER TABLE user_stats ADD COLUMN selected_boat_style TEXT DEFAULT "Classic Sub"',
+      );
+      await db.execute(
+        'UPDATE user_stats SET selected_boat_style = "Classic Sub" WHERE selected_boat_style IS NULL OR selected_boat_style = "default"',
+      );
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute(
+          'ALTER TABLE user_stats ADD COLUMN custom_theme_primary INTEGER',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE user_stats ADD COLUMN custom_theme_accent INTEGER',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE user_stats ADD COLUMN custom_theme_background INTEGER',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE user_stats ADD COLUMN custom_theme_surface INTEGER',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE user_stats ADD COLUMN custom_background_image TEXT',
+        );
+      } catch (_) {}
+    }
+  }
+
+  /// Reset all app data - clears database and shared preferences
+  Future<void> resetDatabase() async {
+    if (kIsWeb) {
+      // Clear SharedPreferences on web
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+    } else {
+      // Close and delete database on native platforms
+      if (_database != null) {
+        await _database!.close();
+        _database = null;
+      }
+      String path = join(await getDatabasesPath(), 'aquaminity.db');
+      await deleteDatabase(path);
+      
+      // Reinitialize the database
+      _database = null;
+      await _ensureInitialized();
+    }
   }
 
   // Migration method to move data from SharedPreferences to database
   Future<void> migrateFromSharedPreferences() async {
     // Web platform doesn't need migration - it uses SharedPreferences directly
     if (kIsWeb) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final db = await database;
 
@@ -185,7 +288,11 @@ class DatabaseHelper {
       };
     } else {
       final db = await database;
-      List<Map<String, dynamic>> results = await db.query('user_stats', where: 'id = ?', whereArgs: [1]);
+      List<Map<String, dynamic>> results = await db.query(
+        'user_stats',
+        where: 'id = ?',
+        whereArgs: [1],
+      );
       return results.isNotEmpty ? results.first : {};
     }
   }
@@ -209,7 +316,9 @@ class DatabaseHelper {
   }
 
   // Dive History Methods
-  Future<List<Map<String, dynamic>>> getDiveHistory({bool includeArchived = false}) async {
+  Future<List<Map<String, dynamic>>> getDiveHistory({
+    bool includeArchived = false,
+  }) async {
     await _ensureInitialized();
     if (kIsWeb) {
       List<String> historyStrings = _prefs!.getStringList('rank_history') ?? [];
@@ -217,7 +326,9 @@ class DatabaseHelper {
         List<String> parts = str.split(' | ');
         return {
           'date': parts.isNotEmpty ? parts[0] : '',
-          'depth': parts.length > 1 ? int.tryParse(parts[1].replaceAll(' m', '')) ?? 0 : 0,
+          'depth': parts.length > 1
+              ? int.tryParse(parts[1].replaceAll(' m', '')) ?? 0
+              : 0,
           'rank': parts.length > 2 ? parts[2] : '',
           'is_archived': parts.length > 2 && parts[2] == 'ARCHIVED' ? 1 : 0,
         };
@@ -231,7 +342,11 @@ class DatabaseHelper {
       String whereClause = includeArchived ? '' : 'is_archived = 0';
       List<Map<String, dynamic>> results = whereClause.isEmpty
           ? await db.query('dive_history', orderBy: 'date DESC')
-          : await db.query('dive_history', where: whereClause, orderBy: 'date DESC');
+          : await db.query(
+              'dive_history',
+              where: whereClause,
+              orderBy: 'date DESC',
+            );
       return results;
     }
   }
@@ -257,12 +372,15 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getInventory() async {
     await _ensureInitialized();
     if (kIsWeb) {
-      List<String> inventoryStrings = _prefs!.getStringList('treasure_inventory') ?? [];
+      List<String> inventoryStrings =
+          _prefs!.getStringList('treasure_inventory') ?? [];
       List<Map<String, dynamic>> inventory = [];
       for (int i = 0; i < inventoryStrings.length; i++) {
         try {
-          Map<String, dynamic> item = (jsonDecode(inventoryStrings[i]) as Map<dynamic, dynamic>).cast<String, dynamic>();
-          item['id'] = i;
+          Map<String, dynamic> item =
+              (jsonDecode(inventoryStrings[i]) as Map<dynamic, dynamic>)
+                  .cast<String, dynamic>();
+          item['id'] = inventoryStrings.length - 1 - i;
           inventory.add(item);
         } catch (e) {
           // Skip invalid items
@@ -278,7 +396,8 @@ class DatabaseHelper {
   Future<void> addTreasure(Treasure treasure) async {
     await _ensureInitialized();
     if (kIsWeb) {
-      List<String> inventory = _prefs!.getStringList('treasure_inventory') ?? [];
+      List<String> inventory =
+          _prefs!.getStringList('treasure_inventory') ?? [];
       Map<String, dynamic> item = {
         'name': treasure.name,
         'rarity': treasure.rarity.name,
@@ -300,7 +419,8 @@ class DatabaseHelper {
   Future<void> removeTreasure(int index) async {
     await _ensureInitialized();
     if (kIsWeb) {
-      List<String> inventory = _prefs!.getStringList('treasure_inventory') ?? [];
+      List<String> inventory =
+          _prefs!.getStringList('treasure_inventory') ?? [];
       // Index is position in reversed list, so reverse it back
       int actualIndex = inventory.length - 1 - index;
       if (actualIndex >= 0 && actualIndex < inventory.length) {
@@ -321,8 +441,90 @@ class DatabaseHelper {
     await _ensureInitialized();
     final db = await database;
     List<Map<String, dynamic>> stats = await db.query('user_stats');
-    return stats.isEmpty || (stats.first['total_depth'] == 0 &&
-                             stats.first['total_coins'] == 0 &&
-                             stats.first['current_streak'] == 0);
+    return stats.isEmpty ||
+        (stats.first['total_depth'] == 0 &&
+            stats.first['total_coins'] == 0 &&
+            stats.first['current_streak'] == 0);
+  }
+
+  // Upgrade-related methods
+  Future<void> purchaseUpgrade(
+    int upgradeId,
+    String upgradeName,
+    String category,
+  ) async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      List<String> purchasedUpgrades =
+          _prefs!.getStringList('purchased_upgrades') ?? [];
+      Map<String, dynamic> upgrade = {
+        'upgrade_id': upgradeId,
+        'upgrade_name': upgradeName,
+        'category': category,
+        'purchased_date': DateTime.now().toIso8601String(),
+      };
+      purchasedUpgrades.add(jsonEncode(upgrade));
+      await _prefs!.setStringList('purchased_upgrades', purchasedUpgrades);
+    } else {
+      final db = await database;
+      await db.insert('purchased_upgrades', {
+        'upgrade_id': upgradeId,
+        'upgrade_name': upgradeName,
+        'category': category,
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchasedUpgrades() async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      List<String> purchasedUpgradesStrings =
+          _prefs!.getStringList('purchased_upgrades') ?? [];
+      List<Map<String, dynamic>> purchasedUpgrades = [];
+      for (int i = 0; i < purchasedUpgradesStrings.length; i++) {
+        try {
+          Map<String, dynamic> upgrade =
+              (jsonDecode(purchasedUpgradesStrings[i]) as Map<dynamic, dynamic>)
+                  .cast<String, dynamic>();
+          upgrade['id'] = i; // Add an id for compatibility
+          purchasedUpgrades.add(upgrade);
+        } catch (e) {
+          // Skip invalid items
+        }
+      }
+      return purchasedUpgrades.reversed.toList();
+    } else {
+      final db = await database;
+      return await db.query('purchased_upgrades');
+    }
+  }
+
+  Future<bool> isUpgradePurchased(int upgradeId) async {
+    await _ensureInitialized();
+    if (kIsWeb) {
+      List<String> purchasedUpgradesStrings =
+          _prefs!.getStringList('purchased_upgrades') ?? [];
+      for (String upgradeString in purchasedUpgradesStrings) {
+        try {
+          Map<String, dynamic> upgrade =
+              (jsonDecode(upgradeString) as Map<dynamic, dynamic>)
+                  .cast<String, dynamic>();
+          if (upgrade['upgrade_id'] == upgradeId) {
+            return true;
+          }
+        } catch (e) {
+          // Skip invalid items
+        }
+      }
+      return false;
+    } else {
+      final db = await database;
+      final result = await db.query(
+        'purchased_upgrades',
+        where: 'upgrade_id = ?',
+        whereArgs: [upgradeId],
+      );
+      return result.isNotEmpty;
+    }
   }
 }

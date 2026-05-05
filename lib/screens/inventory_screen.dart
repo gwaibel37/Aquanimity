@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart'; // Added for feedback
 import '../models/treasure.dart';
@@ -27,11 +28,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final dbHelper = DatabaseHelper();
     final userStats = await dbHelper.getUserStats();
     final inventoryItems = await dbHelper.getInventory();
-    
+
     setState(() {
       items = inventoryItems;
       totalCoins = userStats['total_coins'] ?? 0;
-      _applySort(); 
+      _applySort();
     });
   }
 
@@ -40,19 +41,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
       switch (_currentSort) {
         case SortMode.newest:
           // Showing the items in the order they were found (reversed for newest first)
-          items = items.reversed.toList(); 
+          items = items.reversed.toList();
           break;
         case SortMode.rarity:
           items.sort((a, b) {
-            final rA = Rarity.values.firstWhere((e) => e.name == a['rarity']).index;
-            final rB = Rarity.values.firstWhere((e) => e.name == b['rarity']).index;
+            final rA = Rarity.values
+                .firstWhere((e) => e.name == a['rarity'])
+                .index;
+            final rB = Rarity.values
+                .firstWhere((e) => e.name == b['rarity'])
+                .index;
             return rB.compareTo(rA);
           });
           break;
         case SortMode.value:
           items.sort((a, b) {
-            final vA = Rarity.values.firstWhere((e) => e.name == a['rarity']).value;
-            final vB = Rarity.values.firstWhere((e) => e.name == b['rarity']).value;
+            final vA = Rarity.values
+                .firstWhere((e) => e.name == a['rarity'])
+                .value;
+            final vB = Rarity.values
+                .firstWhere((e) => e.name == b['rarity'])
+                .value;
             return vB.compareTo(vA);
           });
           break;
@@ -62,7 +71,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _toggleSort() {
     setState(() {
-      _currentSort = SortMode.values[(_currentSort.index + 1) % SortMode.values.length];
+      _currentSort =
+          SortMode.values[(_currentSort.index + 1) % SortMode.values.length];
       _applySort();
     });
   }
@@ -70,32 +80,32 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _bulkSell(Rarity rarity) async {
     final dbHelper = DatabaseHelper();
     List<Map<String, dynamic>> inventoryItems = await dbHelper.getInventory();
-    
+
     int count = 0;
     int gain = 0;
-    List<int> indicesToRemove = [];
-    
+    List<int> idsToRemove = [];
+
     // Find items to remove and calculate gain
     for (int i = 0; i < inventoryItems.length; i++) {
       if (inventoryItems[i]['rarity'] == rarity.name) {
         count++;
         gain += rarity.value;
-        indicesToRemove.add(i);
+        idsToRemove.add(inventoryItems[i]['id'] as int);
       }
     }
-    
+
     // Remove items from storage (database or SharedPreferences)
-    for (int index in indicesToRemove.reversed) { // Remove in reverse order to maintain indices
-      await dbHelper.removeTreasure(index);
+    for (int id in idsToRemove.reversed) {
+      await dbHelper.removeTreasure(id);
     }
-    
+
     // Update coins
     if (gain > 0) {
       Map<String, dynamic> userStats = await dbHelper.getUserStats();
       int newTotalCoins = (userStats['total_coins'] ?? 0) + gain;
       await dbHelper.updateUserStats({'total_coins': newTotalCoins});
     }
-    
+
     // Update local state
     setState(() {
       items.removeWhere((item) => item['rarity'] == rarity.name);
@@ -103,15 +113,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
 
     if (count > 0) {
-      if (await Vibration.hasVibrator()) Vibration.vibrate(duration: 50);
-      if(!mounted) return; // Safety check before showing SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
+      final bool canVibrate = !kIsWeb && await Vibration.hasVibrator();
+      if (!mounted) return; // Safety check before showing SnackBar
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
-          backgroundColor: rarity.color.withAlpha(200), 
-          content: Text("Liquidated $count ${rarity.name} items for $gain coins!", 
-          style: const TextStyle(fontWeight: FontWeight.bold))
-        )
+          backgroundColor: rarity.color.withAlpha(200),
+          content: Text(
+            "Liquidated $count ${rarity.name} items for $gain coins!",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       );
+
+      if (canVibrate) {
+        Vibration.vibrate(duration: 50);
+      }
     }
   }
 
@@ -123,23 +140,55 @@ class _InventoryScreenState extends State<InventoryScreen> {
           child: Column(
             children: [
               const SizedBox(height: 10),
-              const Text("TREASURE VAULT", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 4)),
-              
+              const Text(
+                "TREASURE VAULT",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                ),
+              ),
+
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 5,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                        const Icon(
+                          Icons.monetization_on,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
-                        Text("$totalCoins", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20)),
+                        Text(
+                          "$totalCoins",
+                          style: const TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
                       ],
                     ),
                     ActionChip(
-                      label: Text(_currentSort.name.toUpperCase(), style: const TextStyle(color: Colors.cyanAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                      avatar: const Icon(Icons.sort, size: 14, color: Colors.cyanAccent),
+                      label: Text(
+                        _currentSort.name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.cyanAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      avatar: const Icon(
+                        Icons.sort,
+                        size: 14,
+                        color: Colors.cyanAccent,
+                      ),
                       backgroundColor: Colors.white10,
                       onPressed: _toggleSort,
                     ),
@@ -149,16 +198,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 5,
+                ),
                 child: Row(
                   children: Rarity.values.map((r) {
                     bool hasItems = items.any((i) => i['rarity'] == r.name);
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
-                        label: Text("Sell ${r.name}", style: const TextStyle(fontSize: 10, color: Colors.white)),
-                        backgroundColor: hasItems ? r.color.withAlpha(40) : Colors.transparent,
-                        side: BorderSide(color: hasItems ? r.color : Colors.white10),
+                        label: Text(
+                          "Sell ${r.name}",
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                        backgroundColor: hasItems
+                            ? r.color.withAlpha(40)
+                            : Colors.transparent,
+                        side: BorderSide(
+                          color: hasItems ? r.color : Colors.white10,
+                        ),
                         onPressed: hasItems ? () => _bulkSell(r) : null,
                       ),
                     );
@@ -168,54 +230,158 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
               Expanded(
                 child: items.isEmpty
-                    ? const Center(child: Text("VAULT IS EMPTY", style: TextStyle(color: Colors.white24, letterSpacing: 2)))
+                    ? const Center(
+                        child: Text(
+                          "VAULT IS EMPTY",
+                          style: TextStyle(
+                            color: Colors.white24,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      )
                     : GridView.builder(
                         padding: const EdgeInsets.all(15),
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 250,
-                          childAspectRatio: 2.2, 
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 250,
+                              childAspectRatio: 2.2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                            ),
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
-                          final rarity = Rarity.values.firstWhere((e) => e.name == item['rarity']);
+                          final rarity = Rarity.values.firstWhere(
+                            (e) => e.name == item['rarity'],
+                          );
                           // Hero tags must be unique even if items have the same name
-                          final String heroTag = "treasure_${item['name']}_${item['rarity']}_$index";
+                          final String heroTag =
+                              "treasure_${item['name']}_${item['rarity']}_$index";
+                          final int treasureId = item['id'] as int;
 
-                          return Hero(
-                            tag: heroTag,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => Navigator.push(
-                                  context, 
-                                  MaterialPageRoute(builder: (context) => TreasureDetailScreen(item: item, rarity: rarity, heroTag: heroTag))
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: rarity.color.withAlpha(15),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: rarity.color.withAlpha(60), width: 1.5),
+                          return Dismissible(
+                            key: ValueKey(treasureId),
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (direction) async {
+                              final itemName = item['name'];
+                              final coinValue = rarity.value;
+                              final messenger = ScaffoldMessenger.of(context);
+
+                              final dbHelper = DatabaseHelper();
+                              await dbHelper.removeTreasure(treasureId);
+
+                              // Update user stats before async operations
+                              await dbHelper.updateUserStats({
+                                'total_coins': totalCoins + coinValue,
+                              });
+
+                              final bool canVibrate =
+                                  !kIsWeb && await Vibration.hasVibrator();
+                              if (!mounted) return;
+
+                              setState(() {
+                                totalCoins += coinValue;
+                                items.removeWhere(
+                                  (it) => it['id'] == treasureId,
+                                );
+                              });
+
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  backgroundColor: rarity.color.withAlpha(200),
+                                  content: Text(
+                                    "Sold $itemName for $coinValue coins!",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 12),
-                                      Icon(Icons.token, color: rarity.color, size: 24),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(item['name'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
-                                            Text("${rarity.value}c", style: TextStyle(color: rarity.color.withAlpha(180), fontSize: 11, fontWeight: FontWeight.w600)),
-                                          ],
-                                        ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+
+                              if (canVibrate) {
+                                Vibration.vibrate(duration: 50);
+                              }
+                            },
+                            background: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red.withAlpha(180),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              child: const Icon(
+                                Icons.sell,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            child: Hero(
+                              tag: heroTag,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          TreasureDetailScreen(
+                                            item: item,
+                                            rarity: rarity,
+                                            heroTag: heroTag,
+                                          ),
+                                    ),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: rarity.color.withAlpha(15),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: rarity.color.withAlpha(60),
+                                        width: 1.5,
                                       ),
-                                    ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const SizedBox(width: 12),
+                                        Icon(
+                                          Icons.token,
+                                          color: rarity.color,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['name'],
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Text(
+                                                "${rarity.value}c",
+                                                style: TextStyle(
+                                                  color: rarity.color.withAlpha(
+                                                    180,
+                                                  ),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -224,12 +390,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         },
                       ),
               ),
-              
+
               const SizedBox(height: 10),
               TextButton.icon(
-                onPressed: () => Navigator.pop(context), 
-                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white38), 
-                label: const Text("CLOSE VAULT", style: TextStyle(color: Colors.white38))
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.white38,
+                ),
+                label: const Text(
+                  "CLOSE VAULT",
+                  style: TextStyle(color: Colors.white38),
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -245,7 +417,12 @@ class TreasureDetailScreen extends StatelessWidget {
   final Rarity rarity;
   final String heroTag;
 
-  const TreasureDetailScreen({super.key, required this.item, required this.rarity, required this.heroTag});
+  const TreasureDetailScreen({
+    super.key,
+    required this.item,
+    required this.rarity,
+    required this.heroTag,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -257,8 +434,8 @@ class TreasureDetailScreen extends StatelessWidget {
               Align(
                 alignment: Alignment.topLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back), 
-                  onPressed: () => Navigator.pop(context)
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
               const Spacer(),
@@ -271,21 +448,33 @@ class TreasureDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               Text(
-                item['name'].toUpperCase(), 
+                item['name'].toUpperCase(),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: 2)
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: rarity.color.withAlpha(30),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: rarity.color.withAlpha(100))
+                  border: Border.all(color: rarity.color.withAlpha(100)),
                 ),
                 child: Text(
-                  rarity.name.toUpperCase(), 
-                  style: TextStyle(color: rarity.color, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)
+                  rarity.name.toUpperCase(),
+                  style: TextStyle(
+                    color: rarity.color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
                 ),
               ),
               const Padding(
@@ -296,28 +485,45 @@ class TreasureDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
                   // Handling the JSON description or providing a generic fallback
-                  item['description'] ?? "An uncharted treasure recovered from the crushing depths of the abyss. Its properties are yet to be fully understood.",
+                  item['description'] ??
+                      "An uncharted treasure recovered from the crushing depths of the abyss. Its properties are yet to be fully understood.",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.6, fontStyle: FontStyle.italic),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    height: 1.6,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
               const Spacer(),
               Container(
                 margin: const EdgeInsets.only(bottom: 50),
-                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 15,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.black38, 
+                  color: Colors.black38,
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.amber.withAlpha(50))
+                  border: Border.all(color: Colors.amber.withAlpha(50)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                    const Icon(
+                      Icons.monetization_on,
+                      color: Colors.amber,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Text(
-                      "VALUE: ${rarity.value} COINS", 
-                      style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, letterSpacing: 1)
+                      "VALUE: ${rarity.value} COINS",
+                      style: const TextStyle(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
                     ),
                   ],
                 ),

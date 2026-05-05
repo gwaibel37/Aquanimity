@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
 
@@ -7,6 +8,7 @@ import '../models/treasure.dart';
 import '../services/notification_service.dart';
 import '../widgets/shared_widgets.dart';
 import '../data/database_helper.dart';
+import '../data/upgrade_data.dart';
 import 'mission_report_screen.dart';
 
 class DiveScreen extends StatefulWidget {
@@ -17,27 +19,92 @@ class DiveScreen extends StatefulWidget {
   State<DiveScreen> createState() => _DiveScreenState();
 }
 
-class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+class _DiveScreenState extends State<DiveScreen>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   int secondsPassed = 0;
   bool isDiving = false;
   Timer? timer;
+  Timer? _hintTimer;
   String statusMessage = "Pressure Seals: Nominal";
-  
+  String _activeHint = "Stay focused and enjoy the dive.";
+  String selectedBoatStyle = 'default';
+
+  final List<String> _diveTips = [
+    'Stay in the app during dives to avoid The Bends.',
+    'Longer dives earn more depth and better treasures.',
+    'Sell duplicate treasures in the vault for extra coins.',
+    'Use the menu buttons to personalize your theme and check your stats.',
+    'Initiate ascent when your dive is complete to save your progress safely.',
+  ];
+
   late AnimationController _radarController;
   late AnimationController _subFloatController;
-  
+
   String pdaMessage = "";
   Color pdaColor = Colors.cyanAccent;
   bool showPDA = false;
   Timer? pdaDismissTimer;
   final Set<int> reachedMilestones = {};
+  final List<String> _boatAssetPaths = [
+    'assets/boats/sleek_racer.png',
+    'assets/boats/armored_beast.png',
+    'assets/boats/mythical_leviathan.png',
+    'assets/boats/ion_cruiser.png',
+    'assets/boats/phantom_walker.png',
+    'assets/boats/deep_navigator.png',
+    'assets/boats/void_stalker.png',
+    'assets/boats/titan_explorer.png',
+    'assets/boats/quantum_leap.png',
+    'assets/boats/abyss_sovereign.png',
+    'assets/boats/classic_sub.png',
+  ];
+  bool _boatAssetsPrecached = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _radarController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
-    _subFloatController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
+    _radarController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _subFloatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _loadSelectedBoatStyle();
+    _selectNewHint();
+    _startHintTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precacheBoatAssets();
+  }
+
+  void _precacheBoatAssets() {
+    if (_boatAssetsPrecached) return;
+    for (final assetPath in _boatAssetPaths) {
+      precacheImage(AssetImage(assetPath), context);
+    }
+    _boatAssetsPrecached = true;
+  }
+
+  void _selectNewHint() {
+    final hint = _diveTips[math.Random().nextInt(_diveTips.length)];
+    if (mounted) {
+      setState(() {
+        _activeHint = hint;
+      });
+    }
+  }
+
+  void _startHintTimer() {
+    _hintTimer?.cancel();
+    _hintTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _selectNewHint();
+    });
   }
 
   @override
@@ -46,6 +113,7 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
     _radarController.dispose();
     _subFloatController.dispose();
     timer?.cancel();
+    _hintTimer?.cancel();
     pdaDismissTimer?.cancel();
     super.dispose();
   }
@@ -60,214 +128,1513 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text("⚠️ HULL BREACH: EMERGENCY ASCENT DETECTED!", style: TextStyle(fontWeight: FontWeight.bold))
-        )
+          content: Text(
+            "⚠️ HULL BREACH: EMERGENCY ASCENT DETECTED!",
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
       );
     }
-    if (await Vibration.hasVibrator()) { 
-      Vibration.vibrate(pattern: [0, 500, 200, 500]); 
+    if (!kIsWeb && await Vibration.hasVibrator()) {
+      Vibration.vibrate(pattern: [0, 500, 200, 500]);
     }
     stopDive(wasforced: true);
   }
 
   void _triggerPDA(String message, Color color) async {
     pdaDismissTimer?.cancel();
-    if (mounted) setState(() { pdaMessage = message; pdaColor = color; showPDA = true; });
-    if (await Vibration.hasVibrator()) { Vibration.vibrate(duration: 100); }
-    pdaDismissTimer = Timer(const Duration(seconds: 5), () { if (mounted) setState(() => showPDA = false); });
-  }
-
-  void startDive() {
-    int testMultiplier = 500; 
-    setState(() { isDiving = true; secondsPassed = 0; statusMessage = "DESCENT INITIATED"; reachedMilestones.clear(); });
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) return;
+    if (mounted) {
       setState(() {
-        secondsPassed += testMultiplier;
-        
-        if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
-          _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
-          NotificationService().showNotification(201, "Dive Milestone", "Epic tier reached at $secondsPassed m.");
-          reachedMilestones.add(350);
-        } else if (secondsPassed >= 600 && !reachedMilestones.contains(600)) {
-          _triggerPDA("LEGENDARY SIGNALS DETECTED", Colors.amber);
-          NotificationService().showNotification(202, "Dive Milestone", "Legendary signals detected at $secondsPassed m.");
-          reachedMilestones.add(600);
-        }
-
-        if (widget.durationMinutes > 0 && secondsPassed >= (widget.durationMinutes * 60)) stopDive();
+        pdaMessage = message;
+        pdaColor = color;
+        showPDA = true;
       });
+    }
+    if (!kIsWeb && await Vibration.hasVibrator()) {
+      Vibration.vibrate(duration: 100);
+    }
+    pdaDismissTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => showPDA = false);
     });
   }
 
-  Future<void> _updateStreak(DatabaseHelper dbHelper, Map<String, dynamic> currentStats) async {
-    final now = DateTime.now();
-    final todayStr = "${now.year}-${now.month}-${now.day}";
-    final yesterday = now.subtract(const Duration(days: 1));
-    final yesterdayStr = "${yesterday.year}-${yesterday.month}-${yesterday.day}";
+  Future<void> _loadSelectedBoatStyle() async {
+    final dbHelper = DatabaseHelper();
+    final stats = await dbHelper.getUserStats();
+    if (!mounted) return;
+    setState(() {
+      selectedBoatStyle =
+          stats['selected_boat_style'] as String? ?? 'Classic Sub';
+      if (selectedBoatStyle == 'default') selectedBoatStyle = 'Classic Sub';
+    });
+  }
 
-    String lastDate = currentStats['last_dive_date'] ?? "";
-    int currentStreak = currentStats['current_streak'] ?? 0;
-
-    if (lastDate == todayStr) return; 
-    
-    if (lastDate == yesterdayStr || lastDate == "") {
-      currentStreak++; 
-    } else {
-      currentStreak = 1; 
+  Widget _buildBoatWidget(String style, bool isDiving,
+      {required double width, required double height}) {
+    String imagePath;
+    switch (style) {
+      case 'Sleek Racer':
+        imagePath = 'assets/boats/sleek_racer.png';
+        break;
+      case 'Armored Beast':
+        imagePath = 'assets/boats/armored_beast.png';
+        break;
+      case 'Mythical Leviathan':
+        imagePath = 'assets/boats/mythical_leviathan.png';
+        break;
+      case 'Ion Cruiser':
+        imagePath = 'assets/boats/ion_cruiser.png';
+        break;
+      case 'Phantom Walker':
+        imagePath = 'assets/boats/phantom_walker.png';
+        break;
+      case 'Deep Navigator':
+        imagePath = 'assets/boats/deep_navigator.png';
+        break;
+      case 'Void Stalker':
+        imagePath = 'assets/boats/void_stalker.png';
+        break;
+      case 'Titan Explorer':
+        imagePath = 'assets/boats/titan_explorer.png';
+        break;
+      case 'Quantum Leap':
+        imagePath = 'assets/boats/quantum_leap.png';
+        break;
+      case 'Abyss Sovereign':
+        imagePath = 'assets/boats/abyss_sovereign.png';
+        break;
+      default:
+        imagePath = 'assets/boats/classic_sub.png';
     }
 
-    await dbHelper.updateUserStats({
-      'last_dive_date': todayStr,
-      'current_streak': currentStreak,
+    Widget boatImage = SizedBox(
+      width: width,
+      height: height,
+      child: Image.asset(
+        imagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _buildFallbackBoat(style),
+      ),
+    );
+
+    if (!isDiving) {
+      return AnimatedBuilder(
+        animation: _subFloatController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _subFloatController.value * 8 - 4),
+            child: boatImage,
+          );
+        },
+      );
+    }
+    return boatImage;
+  }
+
+  Widget _buildFallbackBoat(String style) {
+    final boatColor = _boatColor(style);
+    switch (style) {
+      case 'Sleek Racer':
+        return _buildSleekRacer(boatColor);
+      case 'Armored Beast':
+        return _buildArmoredBeast(boatColor);
+      case 'Mythical Leviathan':
+        return _buildLeviathan(boatColor);
+      case 'Ion Cruiser':
+        return _buildIonCruiser(boatColor);
+      case 'Phantom Walker':
+        return _buildPhantomWalker(boatColor);
+      case 'Deep Navigator':
+        return _buildDeepNavigator(boatColor);
+      case 'Void Stalker':
+        return _buildVoidStalker(boatColor);
+      case 'Titan Explorer':
+        return _buildTitanExplorer(boatColor);
+      case 'Quantum Leap':
+        return _buildQuantumLeap(boatColor);
+      case 'Abyss Sovereign':
+        return _buildAbyssSovereign(boatColor);
+      default:
+        return _buildClassicSub(boatColor);
+    }
+  }
+
+  Color _boatColor(String style) {
+    switch (style) {
+      case 'Sleek Racer':
+        return Colors.lightBlueAccent;
+      case 'Armored Beast':
+        return Colors.amberAccent.shade200;
+      case 'Mythical Leviathan':
+        return Colors.purpleAccent.shade200;
+      case 'Ion Cruiser':
+        return Colors.yellowAccent;
+      case 'Phantom Walker':
+        return Colors.grey.shade400;
+      case 'Deep Navigator':
+        return Colors.blueAccent;
+      case 'Void Stalker':
+        return Colors.deepPurple.shade200;
+      case 'Titan Explorer':
+        return Colors.orange.shade300;
+      case 'Quantum Leap':
+        return Colors.cyanAccent;
+      case 'Abyss Sovereign':
+        return Colors.redAccent;
+      default:
+        return Colors.cyanAccent;
+    }
+  }
+
+  Widget _buildClassicSub(Color color) {
+    return SizedBox(
+      width: 100,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 0,
+            child: Container(
+              width: 90,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(120),
+                    blurRadius: 18,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            child: Container(
+              width: 56,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 22,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 8),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 24,
+            right: 14,
+            child: Container(
+              width: 20,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleekRacer(Color color) {
+    return SizedBox(
+      width: 140,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 140,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Colors.blueGrey[900],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(110),
+                    blurRadius: 18,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 124,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(240), color.withAlpha(160)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            left: 14,
+            child: Transform.rotate(
+              angle: -0.15,
+              child: Container(
+                width: 20,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(220),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 14,
+            child: Container(
+              width: 28,
+              height: 18,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 22,
+            child: Container(
+              width: 54,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArmoredBeast(Color color) {
+    return SizedBox(
+      width: 150,
+      height: 78,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 6,
+            child: Container(
+              width: 136,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.grey[850],
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(120),
+                    blurRadius: 18,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 118,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            bottom: 18,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.grey[700],
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 18,
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withAlpha(180), width: 2),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 22,
+            child: Container(
+              width: 100,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 42,
+            bottom: 12,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 6),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeviathan(Color color) {
+    return SizedBox(
+      width: 160,
+      height: 86,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 140,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[900],
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(100),
+                    blurRadius: 20,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 14,
+            child: Container(
+              width: 120,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(240), color.withAlpha(160)],
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 8,
+            child: Transform.rotate(
+              angle: 0.4,
+              child: Container(
+                width: 30,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(220),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [_boatEye(), const SizedBox(width: 18), _boatEye()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIonCruiser(Color color) {
+    return SizedBox(
+      width: 145,
+      height: 75,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 135,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(140),
+                    blurRadius: 16,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 120,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(220), color.withAlpha(180)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 6,
+            child: Container(
+              width: 50,
+              height: 30,
+              decoration: BoxDecoration(
+                color: color.withAlpha(210),
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 14,
+            child: Container(
+              width: 8,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(80),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 14,
+            child: Container(
+              width: 8,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(80),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 26,
+            child: Container(
+              width: 60,
+              height: 6,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(3),
+                boxShadow: [
+                  BoxShadow(color: color.withAlpha(60), blurRadius: 6),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhantomWalker(Color color) {
+    return SizedBox(
+      width: 155,
+      height: 80,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 140,
+              height: 26,
+              decoration: BoxDecoration(
+                color: Colors.grey[950],
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(60),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 14,
+            child: Container(
+              width: 130,
+              height: 20,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(200), color.withAlpha(140)],
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            child: Container(
+              width: 55,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withAlpha(180),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 28,
+            top: 16,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(40),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 28,
+            top: 16,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(40),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeepNavigator(Color color) {
+    return SizedBox(
+      width: 150,
+      height: 80,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 138,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Colors.blueGrey[900],
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(130),
+                    blurRadius: 18,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 122,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 10,
+            child: Container(
+              width: 52,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 24,
+            top: 18,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 24,
+            top: 18,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 38,
+            bottom: 14,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 6),
+                _boatPorthole(color),
+                const SizedBox(width: 6),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoidStalker(Color color) {
+    return SizedBox(
+      width: 160,
+      height: 85,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 145,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(120),
+                    blurRadius: 18,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 130,
+              height: 28,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(240), color.withAlpha(160)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 10,
+            child: Transform.rotate(
+              angle: -0.1,
+              child: Container(
+                width: 58,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(220),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 14,
+            top: 20,
+            child: Container(
+              width: 16,
+              height: 20,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(100),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 14,
+            top: 20,
+            child: Container(
+              width: 16,
+              height: 20,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(100),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            right: 10,
+            child: Container(
+              width: 12,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(150),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTitanExplorer(Color color) {
+    return SizedBox(
+      width: 170,
+      height: 90,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 160,
+              height: 35,
+              decoration: BoxDecoration(
+                color: Colors.grey[850],
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(130),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 12,
+            child: Container(
+              width: 145,
+              height: 30,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 12,
+            child: Container(
+              width: 60,
+              height: 35,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 22,
+            top: 20,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 22,
+            top: 20,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 30,
+            bottom: 16,
+            child: Row(
+              children: [
+                _boatPorthole(color),
+                const SizedBox(width: 8),
+                _boatPorthole(color),
+                const SizedBox(width: 8),
+                _boatPorthole(color),
+                const SizedBox(width: 8),
+                _boatPorthole(color),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuantumLeap(Color color) {
+    return SizedBox(
+      width: 150,
+      height: 80,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 140,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(150),
+                    blurRadius: 16,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 14,
+            child: Container(
+              width: 125,
+              height: 24,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(240), color.withAlpha(160)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            child: Container(
+              width: 54,
+              height: 30,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withAlpha(100),
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            top: 16,
+            child: Container(
+              width: 6,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(120),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 20,
+            top: 16,
+            child: Container(
+              width: 6,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(120),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 25,
+            child: Container(
+              width: 70,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(color: color.withAlpha(80), blurRadius: 8),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAbyssSovereign(Color color) {
+    return SizedBox(
+      width: 170,
+      height: 95,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            bottom: 10,
+            child: Container(
+              width: 155,
+              height: 35,
+              decoration: BoxDecoration(
+                color: Colors.grey[950],
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withAlpha(120),
+                    blurRadius: 22,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 14,
+            child: Container(
+              width: 140,
+              height: 30,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withAlpha(240), color.withAlpha(160)],
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 10,
+            child: Container(
+              width: 65,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color.withAlpha(220),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 18,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(140),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 18,
+            top: 18,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(140),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 28,
+            child: Container(
+              width: 50,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(100),
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(color: color.withAlpha(100), blurRadius: 10),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 18,
+            left: 20,
+            child: Container(
+              width: 10,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(160),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 18,
+            right: 20,
+            child: Container(
+              width: 10,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(160),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _boatEye() => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      shape: BoxShape.circle,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.white.withAlpha(120),
+          blurRadius: 6,
+          spreadRadius: 1,
+        ),
+      ],
+    ),
+    child: Center(
+      child: Container(
+        width: 4,
+        height: 4,
+        decoration: const BoxDecoration(
+          color: Colors.black,
+          shape: BoxShape.circle,
+        ),
+      ),
+    ),
+  );
+  Widget _boatPorthole(Color color) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(
+      color: Colors.white24,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white54, width: 1.5),
+    ),
+  );
+
+  void startDive() {
+    setState(() {
+      isDiving = true;
+      secondsPassed = 0;
+      statusMessage = "DESCENT INITIATED";
+      reachedMilestones.clear();
+    });
+    const int depthIncrement = 1; // meters per second
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {
+        secondsPassed += depthIncrement;
+        if (secondsPassed >= 350 && !reachedMilestones.contains(350)) {
+          _triggerPDA("EPIC TIER REACHED: NEW SIGNATURES", Colors.purpleAccent);
+          NotificationService().showNotification(
+            201,
+            "Dive Milestone",
+            "Epic tier reached at $secondsPassed m.",
+          );
+          reachedMilestones.add(350);
+        } else if (secondsPassed >= 600 && !reachedMilestones.contains(600)) {
+          _triggerPDA("LEGENDARY SIGNALS DETECTED", Colors.amber);
+          NotificationService().showNotification(
+            202,
+            "Dive Milestone",
+            "Legendary signals detected at $secondsPassed m.",
+          );
+          reachedMilestones.add(600);
+        }
+        if (widget.durationMinutes > 0 &&
+            secondsPassed >= (widget.durationMinutes * 60)) {
+          stopDive();
+        }
+      });
     });
   }
 
   Future<void> stopDive({bool wasforced = false}) async {
     timer?.cancel();
     timer = null;
-    final int finalDepth = secondsPassed;
     final dbHelper = DatabaseHelper();
-    
+
     Treasure? foundLoot;
     int coinReward = 0;
+    int finalDepth = secondsPassed;
     bool isDuplicate = false;
-    bool isSuccessful = !wasforced && (widget.durationMinutes <= 0 || secondsPassed >= (widget.durationMinutes * 60));
+    bool isSuccessful =
+        !wasforced &&
+        (widget.durationMinutes <= 0 ||
+            secondsPassed >= (widget.durationMinutes * 60));
 
     if (isSuccessful) {
-      // Get current stats
       Map<String, dynamic> currentStats = await dbHelper.getUserStats();
-      final now = DateTime.now();
-      final todayStr = "${now.year}-${now.month}-${now.day}";
-      bool isFirstDiveToday = (currentStats['last_dive_date'] ?? "") != todayStr;
-      
-      // 1. Log Depths
-      int newTotalDepth = (currentStats['total_depth'] ?? 0) + finalDepth;
-      int newWeeklyDepth = (currentStats['weekly_depth'] ?? 0) + finalDepth;
-      int newSuccessfulDives = (currentStats['successful_dives'] ?? 0) + 1;
-      
-      await dbHelper.updateUserStats({
-        'total_depth': newTotalDepth,
-        'weekly_depth': newWeeklyDepth,
-        'successful_dives': newSuccessfulDives,
-      });
-      
-      await _updateStreak(dbHelper, currentStats);
-      await NotificationService().cancelStreakReminder();
+      final todayStr =
+          "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}";
+      bool isFirstDiveToday =
+          (currentStats['last_dive_date'] ?? "") != todayStr;
 
-      foundLoot = Treasure.generate(finalDepth, guaranteedHighestInBracket: isFirstDiveToday);
+      // Get purchased perks for bonuses
+      final purchasedUpgrades = await dbHelper.getPurchasedUpgrades();
+      double coinMultiplier = 1.0;
+      double luckBonus = 0.0;
+      int depthBonus = 0;
+      for (var upgrade in purchasedUpgrades) {
+        final upgradeData = UpgradeData.getUpgradeById(upgrade['upgrade_id']);
+        if (upgradeData.effect != null) {
+          final effect = upgradeData.effect!;
+          if (effect['type'] == 'coinMultiplier') {
+            coinMultiplier += effect['value'];
+          } else if (effect['type'] == 'luckBonus') {
+            luckBonus += effect['value'];
+          } else if (effect['type'] == 'depthBonus') {
+            depthBonus += (effect['value'] as num).toInt();
+          }
+        }
+      }
+
+      final int finalDepth = secondsPassed + depthBonus;
+
+      await dbHelper.updateUserStats({
+        'total_depth': (currentStats['total_depth'] ?? 0) + finalDepth,
+        'weekly_depth': (currentStats['weekly_depth'] ?? 0) + finalDepth,
+        'successful_dives': (currentStats['successful_dives'] ?? 0) + 1,
+      });
+
+      foundLoot = Treasure.generate(
+        finalDepth,
+        guaranteedHighestInBracket: isFirstDiveToday,
+        luckBonus: luckBonus,
+      );
       List<Map<String, dynamic>> inventory = await dbHelper.getInventory();
       isDuplicate = inventory.any((item) => item['name'] == foundLoot!.name);
-      
-      if (isDuplicate) { 
-        coinReward = foundLoot.rarity.value; 
-        int newTotalCoins = (currentStats['total_coins'] ?? 0) + coinReward;
-        await dbHelper.updateUserStats({'total_coins': newTotalCoins});
-        NotificationService().showNotification(301, 'Treasure Duplicate', 'Duplicate treasure converted to $coinReward coins.');
-      } else { 
+
+      if (isDuplicate) {
+        coinReward = (foundLoot.rarity.value * coinMultiplier).round();
+        await dbHelper.updateUserStats({
+          'total_coins': (currentStats['total_coins'] ?? 0) + coinReward,
+        });
+      } else {
         await dbHelper.addTreasure(foundLoot);
-        NotificationService().showNotification(302, 'Sunken Treasure Found!', 'You recovered ${foundLoot.name} (${foundLoot.rarity.name.toUpperCase()}).');
       }
-    } else if (wasforced) {
-      Map<String, dynamic> currentStats = await dbHelper.getUserStats();
-      int currentTotal = currentStats['total_depth'] ?? 0;
-      int newTotalDepth = (currentTotal - (finalDepth * 2)).clamp(0, 9999999);
-      int newForfeitDives = (currentStats['forfeit_dives'] ?? 0) + 1;
-      await dbHelper.updateUserStats({
-        'total_depth': newTotalDepth,
-        'forfeit_dives': newForfeitDives,
-      });
     }
 
     if (!mounted) return;
-    setState(() { isDiving = false; statusMessage = wasforced ? "HULL BREACH" : "DIVE LOGGED"; });
+    setState(() {
+      isDiving = false;
+      statusMessage = wasforced ? "HULL BREACH" : "DIVE LOGGED";
+    });
 
     if (isSuccessful) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => MissionReportScreen(
-        depth: finalDepth, loot: foundLoot, coinReward: coinReward, isDuplicate: isDuplicate
-      ))).then((_) { if (mounted) setState(() => secondsPassed = 0); });
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MissionReportScreen(
+            depth: finalDepth,
+            loot: foundLoot,
+            coinReward: coinReward,
+            isDuplicate: isDuplicate,
+          ),
+        ),
+      ).then((_) {
+        if (mounted) setState(() => secondsPassed = 0);
+      });
     } else {
       setState(() => secondsPassed = 0);
     }
   }
 
+  Widget _buildWaterBackground(Color baseColor, double screenHeight) {
+    return Stack(
+      children: [
+        // Base gradient background
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                baseColor,
+                Color.lerp(baseColor, Colors.black, 0.3)!,
+                Color.lerp(baseColor, Colors.black, 0.6)!,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        ),
+        // Floating bubbles
+        Positioned.fill(
+          child: _BubbleLayer(
+            particleCount: 30,
+            screenHeight: screenHeight,
+            depth: secondsPassed,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final String targetDisplay = widget.durationMinutes == -1 ? "ENDLESS" : "${widget.durationMinutes * 60}m";
+    final media = MediaQuery.of(context);
+    final double screenWidth = media.size.width;
+    final double screenHeight = media.size.height;
+    final bool isLandscape = screenWidth > screenHeight;
+    final bool isWide = screenWidth > 720;
+    final double boatWidth = (150 + (screenWidth - 360) * 0.16).clamp(150, 320);
+    final double boatHeight = (100 + (screenWidth - 360) * 0.10).clamp(100, 240);
+    final double boatTopOffset = isDiving
+        ? screenHeight
+        : screenHeight * (isLandscape ? 0.22 : 0.15);
+    final double contentMaxWidth = isWide ? 520 : screenWidth * 0.92;
+
+    final String targetDisplay = widget.durationMinutes == -1
+        ? "ENDLESS"
+        : "${widget.durationMinutes * 60}m";
+
+    // --- FORCED THEME-INDEPENDENT COLORS ---
+
+    // Updated to a brighter, lighter ocean blue (Steel Blue/Light Sea Blue)
+    const Color surfaceBlue = Color(0xFF005A9E);
+
+    const Color deepBlack = Colors.black;
+    // Lerp background from Blue to Black based on 3000m depth
+    final Color backgroundColor = Color.lerp(
+      surfaceBlue,
+      deepBlack,
+      (secondsPassed / 3000).clamp(0.0, 1.0),
+    )!;
 
     return Scaffold(
-      backgroundColor: Color.lerp(const Color.fromARGB(255, 35, 118, 226), Colors.black, (secondsPassed / 3000).clamp(0, 1)),
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
-            PDANotification(message: pdaMessage, color: pdaColor, visible: showPDA),
-            
+            // Water effect background
+            _buildWaterBackground(backgroundColor, screenHeight),
+
+            PDANotification(
+              message: pdaMessage,
+              color: pdaColor,
+              visible: showPDA,
+            ),
+
             AnimatedPositioned(
               duration: const Duration(milliseconds: 2000),
               curve: Curves.easeInOutCubic,
-              top: isDiving ? screenHeight : screenHeight * 0.15,
-              left: 0, right: 0,
-              child: Icon(Icons.directions_boat, color: Colors.cyanAccent.withAlpha(isDiving ? 50 : 255), size: 60),
+              top: boatTopOffset,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _buildBoatWidget(
+                  selectedBoatStyle,
+                  isDiving,
+                  width: boatWidth,
+                  height: boatHeight,
+                ),
+              ),
             ),
 
             Positioned(
-              top: 20, left: 20,
+              top: 20,
+              left: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("TARGET", style: TextStyle(fontSize: 10, color: Colors.cyanAccent, letterSpacing: 1)),
-                  Text(targetDisplay, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "TARGET",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.cyanAccent,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  Text(
+                    targetDisplay,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            if (isDiving) 
+            if (isDiving)
               Positioned(
-                top: 20, right: 20,
+                top: 20,
+                right: 20,
                 child: AnimatedBuilder(
                   animation: _radarController,
                   builder: (context, child) => Transform.rotate(
                     angle: _radarController.value * 2 * math.pi,
-                    child: Icon(Icons.track_changes, color: Colors.cyanAccent.withAlpha(128), size: 40),
+                    child: Icon(
+                      Icons.track_changes,
+                      color: Colors.cyanAccent.withAlpha(128),
+                      size: 40,
+                    ),
                   ),
                 ),
               ),
 
             Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "$secondsPassed m", 
-                      style: TextStyle(
-                        fontSize: 80, 
-                        fontWeight: FontWeight.w100, 
-                        color: Colors.cyanAccent,
-                        shadows: [Shadow(blurRadius: 20, color: Colors.cyanAccent.withAlpha(128))]
-                      )
-                    ),
-                    Text(statusMessage.toUpperCase(), style: const TextStyle(letterSpacing: 2, fontSize: 12, color: Colors.white54)),
-                    const SizedBox(height: 60),
-                    if (!isDiving && secondsPassed == 0) 
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent[700], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
-                        onPressed: startDive, 
-                        child: const Text("ENGAGE ENGINES", style: TextStyle(fontWeight: FontWeight.bold))
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "$secondsPassed m",
+                        style: TextStyle(
+                          fontSize: 80,
+                          fontWeight: FontWeight.w100,
+                          color: Colors.cyanAccent,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 20,
+                              color: Colors.cyanAccent.withAlpha(128),
+                            ),
+                          ],
+                        ),
                       ),
-                    if (isDiving) 
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.cyanAccent), foregroundColor: Colors.cyanAccent, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
-                        onPressed: () => stopDive(), 
-                        child: const Text("INITIATE ASCENT", style: TextStyle(fontWeight: FontWeight.bold))
+                      Text(
+                        statusMessage.toUpperCase(),
+                        style: const TextStyle(
+                          letterSpacing: 2,
+                          fontSize: 12,
+                          color: Colors.white54,
+                        ),
                       ),
-                    if (!isDiving)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: TextButton.icon(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, size: 16), label: const Text("BACK TO SHIP")),
+                      const SizedBox(height: 12),
+                      Text(
+                        "TIP: $_activeHint",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          letterSpacing: 1,
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
                       ),
-                  ],
+                      const SizedBox(height: 60),
+                      if (!isDiving && secondsPassed == 0)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyanAccent[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 15,
+                            ),
+                          ),
+                          onPressed: startDive,
+                          child: const Text(
+                            "ENGAGE ENGINES",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      if (isDiving)
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.cyanAccent),
+                            foregroundColor: Colors.cyanAccent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 15,
+                            ),
+                          ),
+                          onPressed: () => stopDive(),
+                          child: const Text(
+                            "INITIATE ASCENT",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      if (!isDiving)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back, size: 16),
+                            label: const Text("BACK TO SHIP"),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -275,5 +1642,155 @@ class _DiveScreenState extends State<DiveScreen> with WidgetsBindingObserver, Ti
         ),
       ),
     );
+  }
+}
+
+// Bubble layer widget for clean bubble animation
+class _BubbleLayer extends StatefulWidget {
+  final int particleCount;
+  final double screenHeight;
+  final int depth;
+
+  const _BubbleLayer({
+    required this.particleCount,
+    required this.screenHeight,
+    required this.depth,
+  });
+
+  @override
+  State<_BubbleLayer> createState() => _BubbleLayerState();
+}
+
+class _BubbleLayerState extends State<_BubbleLayer>
+    with TickerProviderStateMixin {
+  late List<_Bubble> bubbles;
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeBubbles();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 16),
+    )..repeat();
+  }
+
+  void _initializeBubbles() {
+    final random = math.Random();
+    bubbles = List.generate(
+      widget.particleCount,
+      (i) => _Bubble(
+        x: random.nextDouble(),
+        y: 1.0 + (random.nextDouble() * 0.2),
+        size: random.nextDouble() * 8 + 2,
+        speed: random.nextDouble() * 0.6 + 0.8,
+        wobble: random.nextDouble() * 0.3,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_BubbleLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.particleCount != widget.particleCount) {
+      _initializeBubbles();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _BubblePainter(
+            bubbles: bubbles,
+            progress: _controller.value,
+          ),
+          size: Size.infinite,
+        );
+      },
+    );
+  }
+}
+
+class _Bubble {
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+  final double wobble;
+
+  _Bubble({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+    required this.wobble,
+  });
+}
+
+class _BubblePainter extends CustomPainter {
+  final List<_Bubble> bubbles;
+  final double progress;
+
+  _BubblePainter({required this.bubbles, required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Fade out all bubbles in the last 25% of the animation cycle
+    final cycleEndFade = (progress > 0.75)
+        ? (1.0 - (progress - 0.75) / 0.25)
+        : 1.0;
+
+    for (final bubble in bubbles) {
+      // Calculate position with smooth upward movement (no wrapping)
+      final newY = bubble.y - progress * bubble.speed;
+
+      // Skip bubbles that are off-screen (above or below)
+      if (newY < -0.1 || newY > 1.1) continue;
+
+      // Add subtle side-to-side wobble for natural movement
+      final wobbleAmount =
+          math.sin(progress * 3 * math.pi + bubble.wobble * 4 * math.pi) * 0.04;
+      final newX = (bubble.x + wobbleAmount).clamp(0.0, 1.0);
+
+      // Create bubble with gradient for depth effect
+      final bubbleX = newX * size.width;
+      final bubbleY = newY * size.height;
+
+      // Fade out as bubble rises to top, and also fade out at cycle end
+      final fadeOut = (1.0 - (newY * newY).clamp(0.0, 1.0)) * cycleEndFade;
+
+      // Outer bubble circle (slightly transparent)
+      final bubblePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.25 * fadeOut)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+
+      canvas.drawCircle(Offset(bubbleX, bubbleY), bubble.size, bubblePaint);
+
+      // Inner bubble highlight
+      final highlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.4 * fadeOut);
+
+      canvas.drawCircle(
+        Offset(bubbleX - bubble.size * 0.3, bubbleY - bubble.size * 0.3),
+        bubble.size * 0.3,
+        highlightPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BubblePainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }

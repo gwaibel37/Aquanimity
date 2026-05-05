@@ -15,8 +15,11 @@ dependencies:
   sqflite: ^2.4.2
   path_provider: ^2.1.5
   path: ^1.9.1
-  flutter_local_notifications: 14.0.0
+  flutter_local_notifications: ^17.0.0
   timezone: ^0.9.4
+  image_picker: ^1.1.2
+  palette_generator: ^0.3.3+2
+  image: ^4.1.3
 
 dev_dependencies:
   flutter_test:
@@ -27,6 +30,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
+    - assets/boats/
 
 # --- ADD THIS SECTION AT THE VERY BOTTOM ---
 flutter_launcher_icons:
