@@ -21,7 +21,7 @@ Device & Platform Compatibility
  Test with custom font sizes (accessibility)
  Test on low-end device (2GB RAM minimum)
 
-Edge Cases & Error Handling
+Edge Cases & Error Handling -
  Network disconnected mid-dive
  Low battery mode enabled during dive
  Storage full scenario
